@@ -299,6 +299,7 @@ const Player = ({
     const lastPositionRef = useRef(0);
     const lastTapRef = useRef(0);
     const episodeChangedRef = useRef(false);
+    const appliedSourceRef = useRef('');
 
     const isSubtitleLink = (download) => {
         if (!download?.url) return false;
@@ -628,6 +629,14 @@ const Player = ({
 
     const setQuality = (download) => {
         if (!download) return;
+        const nextUrl = getPlayUrl(download);
+        const currentUrl = getPlayUrl(current);
+        if (nextUrl && currentUrl && nextUrl === currentUrl) return;
+
+        const video = videoRef.current;
+        if (video && !episodeChangedRef.current) {
+            resumeTimeRef.current = video.currentTime || 0;
+        }
         setCurrent(download);
     };
 
@@ -640,7 +649,13 @@ const Player = ({
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !current) return;
-        resumeTimeRef.current = episodeChangedRef.current ? 0 : (video.currentTime || 0);
+        const sourceUrl = getPlayUrl(current);
+        if (!sourceUrl || appliedSourceRef.current === sourceUrl) return;
+
+        if (episodeChangedRef.current) {
+            resumeTimeRef.current = 0;
+        }
+        appliedSourceRef.current = sourceUrl;
         episodeChangedRef.current = false;
         setPlaying(false);
         const playNext = async () => {
