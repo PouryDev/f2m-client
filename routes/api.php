@@ -17,6 +17,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/user', [AuthController::class, 'me']);
     Route::get('/progress', [MediaController::class, 'progressShow']);
+    Route::get('/progress/list', [MediaController::class, 'progressList']);
     Route::get('/progress/latest', [MediaController::class, 'progressLatest']);
     Route::post('/progress', [MediaController::class, 'progressSave']);
     Route::delete('/progress', [MediaController::class, 'progressDelete']);

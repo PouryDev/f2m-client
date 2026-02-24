@@ -157,6 +157,33 @@ class MediaController extends Controller
         ]);
     }
 
+
+    public function progressList(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $mediaId = (int) $request->query('media_id');
+
+        if (! $mediaId) {
+            return response()->json(['message' => 'media_id is required'], 422);
+        }
+
+        $rows = MediaProgress::query()
+            ->where('user_id', $userId)
+            ->where('media_id', $mediaId)
+            ->whereNotNull('episode_id')
+            ->get(['episode_id', 'seconds', 'duration_seconds', 'last_percent']);
+
+        return response()->json([
+            'media_id' => $mediaId,
+            'episodes' => $rows->map(fn ($row) => [
+                'episode_id' => (int) $row->episode_id,
+                'seconds' => (float) ($row->seconds ?? 0),
+                'duration_seconds' => (float) ($row->duration_seconds ?? 0),
+                'percent' => (float) ($row->last_percent ?? 0),
+            ])->values(),
+        ]);
+    }
+
     public function progressLatest(Request $request): JsonResponse
     {
         $userId = $request->user()->id;

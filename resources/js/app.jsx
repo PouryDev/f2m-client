@@ -267,6 +267,7 @@ const Player = ({
     currentEpisodeIndex,
     onSelectEpisode,
     onTheaterChange,
+    episodeProgressMap,
 }) => {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
@@ -297,6 +298,7 @@ const Player = ({
     const lastSaveRef = useRef(0);
     const lastPositionRef = useRef(0);
     const lastTapRef = useRef(0);
+    const episodeChangedRef = useRef(false);
 
     const isSubtitleLink = (download) => {
         if (!download?.url) return false;
@@ -370,6 +372,14 @@ const Player = ({
     }, [mediaId, episodeId, token]);
 
     useEffect(() => {
+        episodeChangedRef.current = true;
+        setTime(0);
+        setDuration(0);
+        setBufferedPercent(0);
+        lastPositionRef.current = 0;
+    }, [episodeId]);
+
+    useEffect(() => {
         const handleFullscreenChange = async () => {
             if (!document.fullscreenElement && screen.orientation?.unlock) {
                 try {
@@ -419,6 +429,24 @@ const Player = ({
         }
     };
 
+    const requestImmersiveMode = async () => {
+        const container = containerRef.current;
+        if (!container || document.fullscreenElement) return;
+        try {
+            await container.requestFullscreen?.();
+        } catch {
+            return;
+        }
+
+        if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches && screen.orientation?.lock) {
+            try {
+                await screen.orientation.lock('landscape');
+            } catch {
+                // ignore
+            }
+        }
+    };
+
     const togglePlay = () => {
         const video = videoRef.current;
         if (!video) return;
@@ -426,20 +454,7 @@ const Player = ({
             video.play();
             setPlaying(true);
             pulseOverlay();
-            if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches) {
-                const container = containerRef.current;
-                if (container && !document.fullscreenElement) {
-                    container.requestFullscreen?.().then(async () => {
-                        if (screen.orientation?.lock) {
-                            try {
-                                await screen.orientation.lock('landscape');
-                            } catch {
-                                // ignore
-                            }
-                        }
-                    }).catch(() => {});
-                }
-            }
+            requestImmersiveMode();
         } else {
             video.pause();
             setPlaying(false);
@@ -599,6 +614,12 @@ const Player = ({
 
     const currentSeasonNumber = episodes?.[currentEpisodeIndex]?.seasonNumber || 1;
 
+    const getEpisodeProgress = (episodeId) => {
+        if (!episodeId || !episodeProgressMap) return { percent: 0, seconds: 0 };
+        return episodeProgressMap[episodeId] || { percent: 0, seconds: 0 };
+    };
+
+
     useEffect(() => {
         if (currentSeasonNumber) {
             setOpenSeason(currentSeasonNumber);
@@ -619,7 +640,8 @@ const Player = ({
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !current) return;
-        resumeTimeRef.current = time || 0;
+        resumeTimeRef.current = episodeChangedRef.current ? 0 : (video.currentTime || 0);
+        episodeChangedRef.current = false;
         setPlaying(false);
         const playNext = async () => {
             try {
@@ -728,6 +750,7 @@ const Player = ({
                         onPlay={() => {
                             setPlaying(true);
                             showControls(true);
+                            requestImmersiveMode();
                         }}
                         onPause={() => {
                             setPlaying(false);
@@ -1052,6 +1075,13 @@ const Player = ({
                                                 >
                                                     <div style={{ fontWeight: 600 }}>{entry.episode.title || `Episode ${entry.episode.number || entry.index + 1}`}</div>
                                                     <div className="notice">Episode {entry.episode.number || entry.index + 1}</div>
+                                                    <div className="episode-progress-track">
+                                                        <div
+                                                            className="episode-progress-fill"
+                                                            style={{ width: `${getEpisodeProgress(entry.episode.id).percent}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="notice">{Math.round(getEpisodeProgress(entry.episode.id).percent)}%</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1263,6 +1293,7 @@ const LibraryPage = () => {
     const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
     const [watchlist, setWatchlist] = useState(new Set());
     const [favorites, setFavorites] = useState(new Set());
+    const [episodeProgressMap, setEpisodeProgressMap] = useState({});
 
     useEffect(() => {
         apiFetch('/api/media', {}, token)
@@ -1327,6 +1358,7 @@ const LibraryPage = () => {
 
     useEffect(() => {
         setCurrentEpisodeIndex(0);
+        setEpisodeProgressMap({});
     }, [details?.media?.id]);
 
     const filtered = media.filter((item) =>
@@ -1369,6 +1401,32 @@ const LibraryPage = () => {
             setCurrentEpisodeIndex(0);
         }
     }, [flatEpisodes.length]);
+
+    useEffect(() => {
+        if (!details?.media?.id || details.media?.type !== 'series') {
+            setEpisodeProgressMap({});
+            return;
+        }
+        apiFetch(`/api/progress/list?media_id=${details.media.id}`, {}, token)
+            .then((res) => res.json())
+            .then((data) => {
+                const nextMap = {};
+                (data?.episodes || []).forEach((entry) => {
+                    const id = Number(entry?.episode_id || 0);
+                    if (!id) return;
+                    const seconds = Number(entry?.seconds || 0);
+                    const fromPercent = Number(entry?.percent || 0) * 100;
+                    const percent = Math.min(100, Math.max(0, Number.isFinite(fromPercent) ? fromPercent : 0));
+                    nextMap[id] = {
+                        percent,
+                        seconds: Number.isFinite(seconds) ? Math.max(0, seconds) : 0,
+                    };
+                });
+                setEpisodeProgressMap(nextMap);
+            })
+            .catch(() => setEpisodeProgressMap({}));
+    }, [details?.media?.id, details?.media?.type, token]);
+
 
     const currentEpisode = flatEpisodes[currentEpisodeIndex]?.episode || null;
     const handleEnded = () => {
@@ -1484,6 +1542,7 @@ const LibraryPage = () => {
                             currentEpisodeIndex={currentEpisodeIndex}
                             onSelectEpisode={setCurrentEpisodeIndex}
                             onTheaterChange={setIsTheater}
+                            episodeProgressMap={episodeProgressMap}
                         />
                     )}
                 </div>
@@ -1833,3 +1892,10 @@ const RootApp = () => (
 
 const root = createRoot(document.getElementById('app'));
 root.render(<RootApp />);
+
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
