@@ -1,0 +1,17 @@
+{
+  "name": "F2M HyperPlayer",
+  "short_name": "F2M",
+  "description": "F2M HyperPlayer progressive web app",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1018",
+  "theme_color": "#0b1018",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48 72x72 96x96 128x128 256x256",
+      "type": "image/x-icon"
+    }
+  ]
+}
