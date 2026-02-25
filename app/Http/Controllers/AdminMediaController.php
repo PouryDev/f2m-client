@@ -77,7 +77,30 @@ class AdminMediaController extends Controller
         ]);
     }
 
-    private function authorizeAdmin(Request $request): void
+    
+
+    public function mediaStatus(Request $request, int $id): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $item = MediaItem::query()->where('id', $id)->first();
+        if (! $item) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $status = strtolower((string) ($item->status ?? 'ready'));
+        $normalized = match ($status) {
+            'processing', 'pending' => 'processing',
+            'failed', 'error' => 'failed',
+            default => 'ready',
+        };
+
+        return response()->json([
+            'status' => $normalized,
+        ]);
+    }
+
+private function authorizeAdmin(Request $request): void
     {
         if (! $request->user()?->is_admin) {
             abort(403, 'Forbidden');

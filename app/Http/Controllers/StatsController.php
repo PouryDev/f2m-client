@@ -46,7 +46,7 @@ class StatsController extends Controller
             ->get();
 
         $lastWatched = (clone $base)
-            ->select('media_items.id', 'media_items.title', 'media_items.type', 'media_progress.updated_at', 'media_progress.seconds')
+            ->select('media_items.id', 'media_items.title', 'media_items.type', 'media_progress.updated_at', 'media_progress.seconds', 'media_progress.duration_seconds')
             ->orderByDesc('media_progress.updated_at')
             ->first();
 
@@ -62,4 +62,45 @@ class StatsController extends Controller
             'top_completed' => $topCompleted,
         ]);
     }
+
+
+    public function continueWatching(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+
+        $items = MediaProgress::query()
+            ->join('media_items', 'media_items.id', '=', 'media_progress.media_id')
+            ->where('media_progress.user_id', $userId)
+            ->where('media_progress.seconds', '>', 0)
+            ->select([
+                'media_items.id',
+                'media_items.title',
+                'media_items.poster_url',
+                'media_items.type as media_type',
+                'media_progress.seconds as last_position_seconds',
+                'media_progress.duration_seconds',
+                'media_progress.updated_at',
+            ])
+            ->orderByDesc('media_progress.updated_at')
+            ->limit(12)
+            ->get()
+            ->map(function ($row) {
+                $duration = (float) ($row->duration_seconds ?? 0);
+                $seconds = (float) ($row->last_position_seconds ?? 0);
+                $progress = $duration > 0 ? ($seconds / $duration) * 100 : 0;
+
+                return [
+                    'id' => $row->id,
+                    'title' => $row->title,
+                    'poster_url' => $row->poster_url,
+                    'progress_percentage' => max(0, min(100, $progress)),
+                    'last_position_seconds' => max(0, $seconds),
+                    'media_type' => $row->media_type,
+                ];
+            })
+            ->values();
+
+        return response()->json($items);
+    }
+
 }
