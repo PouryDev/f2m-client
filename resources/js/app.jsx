@@ -108,6 +108,30 @@ const Icon = ({ name, className }) => {
                     <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
             );
+        case 'heart':
+            return (
+                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20s-7-4.35-7-10a4.2 4.2 0 0 1 7-3.2A4.2 4.2 0 0 1 19 10c0 5.65-7 10-7 10Z" fill="currentColor" />
+                </svg>
+            );
+        case 'bookmark':
+            return (
+                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 4.75A1.75 1.75 0 0 1 8.75 3h6.5A1.75 1.75 0 0 1 17 4.75V21l-5-3-5 3V4.75Z" fill="currentColor" />
+                </svg>
+            );
+        case 'chevronLeft':
+            return (
+                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m14.5 5.5-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            );
+        case 'chevronRight':
+            return (
+                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9.5 5.5 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            );
         default:
             return null;
     }
@@ -930,6 +954,7 @@ const Player = ({
                             togglePlay();
                         }}
                         controls={false}
+                        autoPlay
                         playsInline
                         preload="metadata"
                     >
@@ -989,7 +1014,7 @@ const Player = ({
                 </div>
                 <div className={`player-hud ${controlsVisible ? 'show' : ''}`} onClick={(event) => event.stopPropagation()}>
                     <div className="player-topbar">
-                        <div className="player-title">{title || 'Now Playing'}{episodeLabel}</div>
+                        <div className="player-title">{title || 'F2M HyperPlayer'}{episodeLabel}</div>
                         <div className="player-actions">
                             {episodes?.length > 0 && (
                                 <button
@@ -1319,6 +1344,62 @@ const Player = ({
                     {current?.format === 'mkv' && (
                         <div className="notice">Browser support for MKV is limited. If playback fails, switch to MP4.</div>
                     )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const CarouselRail = ({ title, children, className = '', emptyMessage = '' }) => {
+    const railRef = useRef(null);
+    const [canPrev, setCanPrev] = useState(false);
+    const [canNext, setCanNext] = useState(false);
+
+    const syncButtons = () => {
+        const node = railRef.current;
+        if (!node) return;
+        setCanPrev(node.scrollLeft > 6);
+        setCanNext(node.scrollLeft + node.clientWidth < node.scrollWidth - 6);
+    };
+
+    useEffect(() => {
+        syncButtons();
+        const node = railRef.current;
+        if (!node) return;
+        node.addEventListener('scroll', syncButtons, { passive: true });
+        window.addEventListener('resize', syncButtons);
+        return () => {
+            node.removeEventListener('scroll', syncButtons);
+            window.removeEventListener('resize', syncButtons);
+        };
+    }, [children]);
+
+    const slide = (direction) => {
+        const node = railRef.current;
+        if (!node) return;
+        node.scrollBy({ left: direction * Math.max(320, node.clientWidth * 0.72), behavior: 'smooth' });
+    };
+
+    const childCount = React.Children.count(children);
+
+    return (
+        <div className={`library-row-section ${className}`.trim()}>
+            <div className="section-head">
+                <div className="section-title">{title}</div>
+                <div className="carousel-nav">
+                    <button className="icon-btn btn carousel-btn" onClick={() => slide(-1)} disabled={!canPrev} type="button" aria-label={`Previous in ${title}`}>
+                        <Icon name="chevronLeft" />
+                    </button>
+                    <button className="icon-btn btn carousel-btn" onClick={() => slide(1)} disabled={!canNext} type="button" aria-label={`Next in ${title}`}>
+                        <Icon name="chevronRight" />
+                    </button>
+                </div>
+            </div>
+            <div className="scroll-fade">
+                <div className="media-row" ref={railRef}>
+                    {children}
+                    {!childCount && emptyMessage ? <div className="notice">{emptyMessage}</div> : null}
                 </div>
             </div>
         </div>
@@ -1681,83 +1762,76 @@ const LibraryPage = () => {
                             </div>
 
                             <div className="cinematic-hero-scroll">
-                                <div className="section-title">Continue Watching</div>
-                                <div className="scroll-fade">
-                                    <div className="hero-carousel">
-                                        {continueLoading && Array.from({ length: 3 }).map((_, idx) => (
-                                            <div key={`continue-skeleton-${idx}`} className="hero-card skeleton-block" />
-                                        ))}
-                                        {!continueLoading && continueWatching.map((item) => (
-                                            <button
-                                                key={`continue-${item.id}`}
-                                                className="hero-card"
-                                                onClick={() => navigate(`/media/${item.id}`)}
-                                                type="button"
-                                            >
-                                                {item.poster_url ? <img src={item.poster_url} alt={item.title || 'Poster'} /> : <div className="poster-fallback">F2M</div>}
-                                                <div className="hero-card-overlay">
-                                                    <div className="hero-card-title">{item.title || 'Untitled'}</div>
-                                                    <div className="hero-progress-track"><span style={{ width: `${Math.max(0, Math.min(100, Number(item.progress_percentage || 0)))}%` }} /></div>
-                                                </div>
-                                            </button>
-                                        ))}
-                                        {!continueLoading && continueWatching.length === 0 && <div className="notice">Nothing to resume yet.</div>}
-                                    </div>
-                                </div>
+                                <CarouselRail title="Continue Watching" className="carousel-hero" emptyMessage={!continueLoading ? 'Nothing to resume yet.' : ''}>
+                                    {continueLoading && Array.from({ length: 3 }).map((_, idx) => (
+                                        <div key={`continue-skeleton-${idx}`} className="hero-card skeleton-block" />
+                                    ))}
+                                    {!continueLoading && continueWatching.map((item) => (
+                                        <button
+                                            key={`continue-${item.id}`}
+                                            className="hero-card"
+                                            onClick={() => navigate(`/media/${item.id}`)}
+                                            type="button"
+                                        >
+                                            {item.poster_url ? <img src={item.poster_url} alt={item.title || 'Poster'} /> : <div className="poster-fallback">F2M</div>}
+                                            <div className="hero-card-overlay">
+                                                <div className="hero-card-title">{item.title || 'Untitled'}</div>
+                                                <div className="hero-progress-track"><span style={{ width: `${Math.max(0, Math.min(100, Number(item.progress_percentage || 0)))}%` }} /></div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </CarouselRail>
                             </div>
 
                             {cinematicRows.map((row) => (
-                                <div key={row.key} className="library-row-section">
-                                    <div className="section-title">{row.title}</div>
-                                    <div className="scroll-fade">
-                                        <div className="media-row">
-                                            {mediaLoading && Array.from({ length: 8 }).map((_, idx) => (
-                                                <div key={`${row.key}-skeleton-${idx}`} className="media-card skeleton-block" />
-                                            ))}
-                                            {!mediaLoading && row.items.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="media-card"
-                                        onClick={() => navigate(`/media/${item.id}`)}
-                                    >
-                                        <div className="media-card-actions">
-                                            <button
-                                                className={`icon-btn action-btn ${watchlist.has(item.id) ? 'active' : ''}`}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    toggleWatchlist(item.id);
-                                                }}
-                                                title="Watchlist"
-                                            >
-                                                W
-                                            </button>
-                                            <button
-                                                className={`icon-btn action-btn ${favorites.has(item.id) ? 'active' : ''}`}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    toggleFavorite(item.id);
-                                                }}
-                                                title="Favourite"
-                                            >
-                                                F
-                                            </button>
+                                <CarouselRail key={row.key} title={row.title} emptyMessage={!mediaLoading ? 'No titles in this row yet.' : ''}>
+                                    {mediaLoading && Array.from({ length: 8 }).map((_, idx) => (
+                                        <div key={`${row.key}-skeleton-${idx}`} className="media-card skeleton-block" />
+                                    ))}
+                                    {!mediaLoading && row.items.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="media-card"
+                                            onClick={() => navigate(`/media/${item.id}`)}
+                                        >
+                                            <div className="media-card-actions">
+                                                <button
+                                                    className={`icon-btn action-btn ${watchlist.has(item.id) ? 'active' : ''}`}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        toggleWatchlist(item.id);
+                                                    }}
+                                                    title="Watchlist"
+                                                    aria-label="Watchlist"
+                                                >
+                                                    <Icon name="bookmark" />
+                                                </button>
+                                                <button
+                                                    className={`icon-btn action-btn ${favorites.has(item.id) ? 'active' : ''}`}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        toggleFavorite(item.id);
+                                                    }}
+                                                    title="Favourite"
+                                                    aria-label="Favourite"
+                                                >
+                                                    <Icon name="heart" />
+                                                </button>
+                                            </div>
+                                            <div className="media-card-media">
+                                                {item.poster_url ? (
+                                                    <img src={item.poster_url} alt={item.title || 'poster'} />
+                                                ) : (
+                                                    <div className="poster-fallback">F2M</div>
+                                                )}
+                                            </div>
+                                            <div className="media-card-body">
+                                                <div className="media-card-title">{item.title || 'Untitled'}</div>
+                                                <div className="media-card-meta">{item.year || '—'} · IMDb {item.imdb_rating || '—'}</div>
+                                            </div>
                                         </div>
-                                        <div className="media-card-media">
-                                            {item.poster_url ? (
-                                                <img src={item.poster_url} alt={item.title || 'poster'} />
-                                            ) : (
-                                                <div className="poster-fallback">F2M</div>
-                                            )}
-                                        </div>
-                                        <div className="media-card-body">
-                                            <div className="media-card-title">{item.title || 'Untitled'}</div>
-                                            <div className="media-card-meta">{item.year || '—'} · IMDb {item.imdb_rating || '—'}</div>
-                                        </div>
-                                    </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
+                                    ))}
+                                </CarouselRail>
                             ))}
 
                             {!mediaLoading && cinematicRows.length === 0 && (
@@ -1787,25 +1861,6 @@ const LibraryPage = () => {
                 </div>
 
                 <div className="sidebar">
-                    <div className="panel now-playing-panel">
-                        <div className="section-title">Now Playing</div>
-                        {details ? (
-                            <div className="now-playing-content">
-                                <div className="now-playing-backdrop" style={{ backgroundImage: details.media?.poster_url ? `url(${details.media.poster_url})` : undefined }} />
-                                <div style={{ fontWeight: 600 }}>{details.media?.title || 'Untitled'}</div>
-                                <div className="meta-row">
-                                    <span>{details.media?.year || '—'}</span>
-                                    <span>IMDb {details.media?.imdb_rating || '—'}</span>
-                                </div>
-                                <div className="hero-progress-track now-playing-progress"><span style={{ width: '40%' }} /></div>
-                                <button className="btn primary" onClick={() => navigate(`/media/${details.media?.id}`)}>Quick Resume</button>
-                                <div className="notice" style={{ marginTop: 8 }}>{details.media?.synopsis}</div>
-                            </div>
-                        ) : (
-                            <div className="notice">Select a title to see details and playback.</div>
-                        )}
-                    </div>
-
                     {details && (
                         <div className="panel">
                             <div className="section-title">Actions</div>
@@ -1920,7 +1975,7 @@ const AdminPage = () => {
                 </div>
                 <div className="user-chip">
                     <span>{user?.name || 'Admin'}</span>
-                    <Link className="btn" to="/">Back to Library</Link>
+                    <Link className="btn back-btn" to="/"><Icon name="chevronLeft" /> Back to Library</Link>
                 </div>
             </div>
 
@@ -2019,7 +2074,7 @@ const AccountPage = () => {
                     </div>
                 </div>
                 <div className="user-chip">
-                    <Link className="btn" to="/">Back to Library</Link>
+                    <Link className="btn back-btn" to="/"><Icon name="chevronLeft" /> Back to Library</Link>
                 </div>
             </div>
 
