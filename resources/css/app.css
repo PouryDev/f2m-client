@@ -1226,6 +1226,34 @@ body {
     }
 }
 
+
+@media (max-width: 720px) and (orientation: portrait) {
+    .player-topbar {
+        display: none;
+    }
+
+    .player-bottom .control-row {
+        display: none;
+    }
+
+    .player-bottom {
+        gap: 0;
+    }
+
+    .player-center-controls {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
+
+@media (max-width: 720px) and (orientation: landscape) {
+    .player-topbar,
+    .player-bottom .control-row {
+        display: flex;
+    }
+}
+
 @media (max-width: 520px) {
     .brand {
         gap: 10px;

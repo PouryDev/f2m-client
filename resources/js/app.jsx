@@ -26,12 +26,28 @@ const Icon = ({ name, className }) => {
                     <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">15</text>
                 </svg>
             );
+        case 'rewind5':
+            return (
+                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 6 6 12l5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M18 6l-5 6 5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">5</text>
+                </svg>
+            );
         case 'forward15':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M13 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     <path d="M6 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">15</text>
+                </svg>
+            );
+        case 'forward5':
+            return (
+                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M13 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">5</text>
                 </svg>
             );
         case 'volume':
@@ -115,6 +131,7 @@ const pickQualityLabel = (download) => {
 };
 
 const getPlayUrl = (download) => download?.stream_url || download?.url || '';
+const isHlsSource = (url) => /\.m3u8(\?|#|$)/i.test(url || '');
 
 const getResumeKey = (mediaId, episodeId) => {
     if (!mediaId) return null;
@@ -124,6 +141,8 @@ const getResumeKey = (mediaId, episodeId) => {
 const AuthContext = createContext(null);
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
+const MOBILE_SEEK_SECONDS = 15;
+const DESKTOP_SEEK_SECONDS = 5;
 
 const apiFetch = (url, options = {}, token) => {
     const fullUrl = API_BASE && url.startsWith('/') ? `${API_BASE}${url}` : url;
@@ -131,7 +150,14 @@ const apiFetch = (url, options = {}, token) => {
     if (token) {
         headers.Authorization = `Bearer ${token}`;
     }
-    return fetch(fullUrl, { ...options, headers });
+    const requestOptions = {
+        ...options,
+        headers,
+    };
+    if (!requestOptions.cache) {
+        requestOptions.cache = 'no-store';
+    }
+    return fetch(fullUrl, requestOptions);
 };
 
 const apiFetchForm = (url, formData, token) => {
@@ -199,6 +225,7 @@ const AuthProvider = ({ children }) => {
             apiFetch('/api/auth/logout', { method: 'POST' }, token).catch(() => {});
         }
         localStorage.removeItem('f2m:token');
+        sessionStorage.removeItem('f2m:token');
         setToken('');
         setUser(null);
     };
@@ -300,6 +327,44 @@ const Player = ({
     const lastTapRef = useRef(0);
     const episodeChangedRef = useRef(false);
     const appliedSourceRef = useRef('');
+    const qualitySwitchMetaRef = useRef(null);
+    const qualitySwitchingRef = useRef(false);
+    const stalledRef = useRef(false);
+
+    const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+    const enterFullscreen = async (element) => {
+        if (!element) return false;
+        try {
+            if (element.requestFullscreen) {
+                await element.requestFullscreen();
+                return true;
+            }
+            if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+                return true;
+            }
+        } catch {
+            // ignore
+        }
+        return false;
+    };
+
+    const exitFullscreen = async () => {
+        try {
+            if (document.exitFullscreen) {
+                await document.exitFullscreen();
+                return true;
+            }
+            if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+                return true;
+            }
+        } catch {
+            // ignore
+        }
+        return false;
+    };
 
     const isSubtitleLink = (download) => {
         if (!download?.url) return false;
@@ -382,7 +447,7 @@ const Player = ({
 
     useEffect(() => {
         const handleFullscreenChange = async () => {
-            if (!document.fullscreenElement && screen.orientation?.unlock) {
+            if (!getFullscreenElement() && screen.orientation?.unlock) {
                 try {
                     await screen.orientation.unlock();
                 } catch {
@@ -391,7 +456,11 @@ const Player = ({
             }
         };
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+        };
     }, []);
 
     useEffect(() => {
@@ -414,11 +483,11 @@ const Player = ({
         if (event.key === 't') setTheater((value) => !value);
         if (event.key === 'ArrowRight') {
             event.preventDefault();
-            seekBy(15);
+            seekBy(DESKTOP_SEEK_SECONDS);
         }
         if (event.key === 'ArrowLeft') {
             event.preventDefault();
-            seekBy(-15);
+            seekBy(-DESKTOP_SEEK_SECONDS);
         }
         if (event.key === 'ArrowUp') {
             event.preventDefault();
@@ -432,11 +501,16 @@ const Player = ({
 
     const requestImmersiveMode = async () => {
         const container = containerRef.current;
-        if (!container || document.fullscreenElement) return;
-        try {
-            await container.requestFullscreen?.();
-        } catch {
-            return;
+        const video = videoRef.current;
+        if (!container || getFullscreenElement()) return;
+        const entered = await enterFullscreen(container);
+
+        if (!entered && video?.webkitEnterFullscreen) {
+            try {
+                video.webkitEnterFullscreen();
+            } catch {
+                // ignore
+            }
         }
 
         if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches && screen.orientation?.lock) {
@@ -480,13 +554,30 @@ const Player = ({
         seekTo(time + delta);
     };
 
-    const toggleFullscreen = () => {
+    const toggleFullscreen = async () => {
         const container = containerRef.current;
+        const video = videoRef.current;
         if (!container) return;
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            container.requestFullscreen();
+        if (getFullscreenElement()) {
+            await exitFullscreen();
+            return;
+        }
+
+        const entered = await enterFullscreen(container);
+        if (!entered && video?.webkitEnterFullscreen) {
+            try {
+                video.webkitEnterFullscreen();
+            } catch {
+                // ignore
+            }
+        }
+
+        if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches && screen.orientation?.lock) {
+            try {
+                await screen.orientation.lock('landscape');
+            } catch {
+                // ignore
+            }
         }
     };
 
@@ -627,16 +718,61 @@ const Player = ({
         }
     }, [currentSeasonNumber]);
 
-    const setQuality = (download) => {
+    const preloadSource = (url) => new Promise((resolve) => {
+        if (!url) {
+            resolve(false);
+            return;
+        }
+        const probe = document.createElement('video');
+        probe.preload = 'auto';
+        probe.src = url;
+        let done = false;
+        const finalize = (result) => {
+            if (done) return;
+            done = true;
+            probe.removeAttribute('src');
+            probe.load();
+            resolve(result);
+        };
+        const timeout = window.setTimeout(() => finalize(false), 1800);
+        probe.addEventListener('canplay', () => {
+            window.clearTimeout(timeout);
+            finalize(true);
+        }, { once: true });
+        probe.addEventListener('error', () => {
+            window.clearTimeout(timeout);
+            finalize(false);
+        }, { once: true });
+        probe.load();
+    });
+
+    const setQuality = async (download, options = {}) => {
         if (!download) return;
+        const { smooth = false } = options;
         const nextUrl = getPlayUrl(download);
         const currentUrl = getPlayUrl(current);
         if (nextUrl && currentUrl && nextUrl === currentUrl) return;
 
         const video = videoRef.current;
-        if (video && !episodeChangedRef.current) {
-            resumeTimeRef.current = video.currentTime || 0;
+        if (!video || episodeChangedRef.current) {
+            qualitySwitchMetaRef.current = null;
+            setCurrent(download);
+            return;
         }
+
+        const snapshot = {
+            time: video.currentTime || 0,
+            wasPlaying: !video.paused,
+            playbackRate,
+        };
+
+        if (smooth && snapshot.wasPlaying && !isHlsSource(nextUrl)) {
+            if (qualitySwitchingRef.current) return;
+            qualitySwitchingRef.current = true;
+            await preloadSource(nextUrl);
+        }
+
+        qualitySwitchMetaRef.current = snapshot;
         setCurrent(download);
     };
 
@@ -652,30 +788,43 @@ const Player = ({
         const sourceUrl = getPlayUrl(current);
         if (!sourceUrl || appliedSourceRef.current === sourceUrl) return;
 
+        const switchMeta = qualitySwitchMetaRef.current;
         if (episodeChangedRef.current) {
             resumeTimeRef.current = 0;
+        } else if (switchMeta && Number.isFinite(switchMeta.time)) {
+            resumeTimeRef.current = switchMeta.time;
         }
         appliedSourceRef.current = sourceUrl;
         episodeChangedRef.current = false;
-        setPlaying(false);
+
         const playNext = async () => {
+            const shouldPlay = switchMeta?.wasPlaying ?? !video.paused;
             try {
+                video.src = sourceUrl;
                 video.load();
-                await video.play();
-                setPlaying(true);
+                video.playbackRate = switchMeta?.playbackRate || playbackRate;
+                if (shouldPlay) {
+                    await video.play();
+                    setPlaying(true);
+                } else {
+                    setPlaying(false);
+                }
             } catch (error) {
                 setPlaying(false);
+            } finally {
+                qualitySwitchMetaRef.current = null;
+                qualitySwitchingRef.current = false;
             }
         };
         playNext();
-    }, [current]);
+    }, [current, playbackRate]);
 
     useEffect(() => {
         const handleOrientation = () => {
             if (!window.matchMedia || !window.matchMedia('(max-width: 720px)').matches) return;
             const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-            if (isLandscape && containerRef.current && !document.fullscreenElement) {
-                containerRef.current.requestFullscreen?.().catch(() => {});
+            if (isLandscape && containerRef.current && !getFullscreenElement()) {
+                enterFullscreen(containerRef.current);
             }
         };
         window.addEventListener('orientationchange', handleOrientation);
@@ -693,21 +842,23 @@ const Player = ({
     useEffect(() => {
         if (!autoQuality || !downloadsForLanguage.length || !current) return;
         const now = Date.now();
-        if (now - autoSwitchRef.current < 6000) return;
+        if (now - autoSwitchRef.current < 9000) return;
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || video.paused || qualitySwitchingRef.current || isHlsSource(getPlayUrl(current))) return;
         const buffered = video.buffered;
         if (!buffered || buffered.length === 0) return;
         const bufferEnd = buffered.end(buffered.length - 1);
         const bufferAhead = bufferEnd - video.currentTime;
 
         const currentIndex = downloadsForLanguage.findIndex((item) => item.url === current.url);
-        if (bufferAhead < 4 && currentIndex < downloadsForLanguage.length - 1) {
+        if (currentIndex < 0) return;
+
+        if (bufferAhead < 2 && currentIndex < downloadsForLanguage.length - 1 && (loading || stalledRef.current)) {
             autoSwitchRef.current = now;
-            setQuality(downloadsForLanguage[currentIndex + 1]);
-        } else if (bufferAhead > 20 && currentIndex > 0) {
+            setQuality(downloadsForLanguage[currentIndex + 1], { smooth: true });
+        } else if (bufferAhead > 30 && currentIndex > 0 && !loading && !stalledRef.current) {
             autoSwitchRef.current = now;
-            setQuality(downloadsForLanguage[currentIndex - 1]);
+            setQuality(downloadsForLanguage[currentIndex - 1], { smooth: true });
         }
     }, [autoQuality, downloadsForLanguage, current, time, loading]);
 
@@ -752,15 +903,17 @@ const Player = ({
                 {current ? (
                     <video
                         ref={videoRef}
-                        src={getPlayUrl(current)}
                         crossOrigin="anonymous"
                         onTimeUpdate={onTimeUpdate}
                         onProgress={onProgress}
                         onLoadedMetadata={onLoaded}
                         onLoadStart={() => setLoading(true)}
-                        onWaiting={() => setLoading(true)}
-                        onCanPlay={() => setLoading(false)}
-                        onPlaying={() => setLoading(false)}
+                        onWaiting={() => { setLoading(true); stalledRef.current = true; }}
+                        onCanPlay={() => { setLoading(false); stalledRef.current = false; }}
+                        onCanPlayThrough={() => { setLoading(false); stalledRef.current = false; }}
+                        onLoadedData={() => setLoading(false)}
+                        onPlaying={() => { setLoading(false); stalledRef.current = false; }}
+                        onError={() => setLoading(false)}
                         onEnded={onEndedInternal}
                         onPlay={() => {
                             setPlaying(true);
@@ -779,6 +932,8 @@ const Player = ({
                             togglePlay();
                         }}
                         controls={false}
+                        playsInline
+                        preload="metadata"
                     >
                         {activeSubtitle && /\.vtt(\?|#|$)/.test(activeSubtitle.url.toLowerCase()) && (
                             <track
@@ -804,7 +959,7 @@ const Player = ({
                         className="icon-btn seek-btn"
                         onClick={(event) => {
                             event.stopPropagation();
-                            seekBy(-15);
+                            seekBy(-MOBILE_SEEK_SECONDS);
                         }}
                         aria-label="Back 15 seconds"
                         title="Back 15 seconds"
@@ -826,7 +981,7 @@ const Player = ({
                         className="icon-btn seek-btn"
                         onClick={(event) => {
                             event.stopPropagation();
-                            seekBy(15);
+                            seekBy(MOBILE_SEEK_SECONDS);
                         }}
                         aria-label="Forward 15 seconds"
                         title="Forward 15 seconds"
@@ -908,19 +1063,19 @@ const Player = ({
                                 </button>
                                 <button
                                     className="btn icon-btn seek-btn"
-                                    onClick={() => seekBy(-15)}
-                                    aria-label="Back 15 seconds"
-                                    title="Back 15 seconds"
+                                    onClick={() => seekBy(-DESKTOP_SEEK_SECONDS)}
+                                    aria-label="Back 5 seconds"
+                                    title="Back 5 seconds"
                                 >
-                                    <Icon name="rewind15" />
+                                    <Icon name="rewind5" />
                                 </button>
                                 <button
                                     className="btn icon-btn seek-btn"
-                                    onClick={() => seekBy(15)}
-                                    aria-label="Forward 15 seconds"
-                                    title="Forward 15 seconds"
+                                    onClick={() => seekBy(DESKTOP_SEEK_SECONDS)}
+                                    aria-label="Forward 5 seconds"
+                                    title="Forward 5 seconds"
                                 >
-                                    <Icon name="forward15" />
+                                    <Icon name="forward5" />
                                 </button>
                                 <span className="notice">{formatTime(time)} / {formatTime(duration)}</span>
                             </div>
@@ -979,7 +1134,7 @@ const Player = ({
                                                     className={`pill ${!autoQuality && current?.url === download.url ? 'active' : ''}`}
                                                     onClick={() => {
                                                         setAutoQuality(false);
-                                                        setQuality(download);
+                                                        setQuality(download, { smooth: false });
                                                         setQualityOpen(false);
                                                     }}
                                                 >
@@ -1134,7 +1289,7 @@ const Player = ({
                                     className={`pill ${!autoQuality && current?.url === download.url ? 'active' : ''}`}
                                     onClick={() => {
                                         setAutoQuality(false);
-                                        setQuality(download);
+                                        setQuality(download, { smooth: false });
                                     }}
                                 >
                                     {pickQualityLabel(download)}
@@ -1486,7 +1641,7 @@ const LibraryPage = () => {
                     {user?.is_admin && (
                         <button className="btn" onClick={() => navigate('/admin')}>Admin</button>
                     )}
-                    <button className="btn" onClick={logout}>Logout</button>
+                    <button className="btn" onClick={async () => { await logout(); navigate('/login', { replace: true }); }}>Logout</button>
                 </div>
             </div>
 
