@@ -1,10 +1,8 @@
 <?php
 
-use App\Http\Controllers\AccountDashboardController;
 use App\Http\Controllers\AdminMediaController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FavoritesController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\WatchlistController;
@@ -18,8 +16,6 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/user', [AuthController::class, 'me']);
-    Route::get('/home/dashboard', [HomeController::class, 'dashboard']);
-    Route::get('/account/dashboard', [AccountDashboardController::class, 'show']);
     Route::get('/progress', [MediaController::class, 'progressShow']);
     Route::get('/progress/list', [MediaController::class, 'progressList']);
     Route::get('/progress/latest', [MediaController::class, 'progressLatest']);
