@@ -22,7 +22,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/progress', [MediaController::class, 'progressSave']);
     Route::delete('/progress', [MediaController::class, 'progressDelete']);
     Route::get('/stats/overview', [StatsController::class, 'overview']);
+    Route::get('/user/continue-watching', [StatsController::class, 'continueWatching']);
     Route::get('/watchlist', [WatchlistController::class, 'index']);
+    Route::get('/user/watchlist', [WatchlistController::class, 'index']);
     Route::post('/watchlist', [WatchlistController::class, 'store']);
     Route::delete('/watchlist', [WatchlistController::class, 'destroy']);
     Route::get('/favorites', [FavoritesController::class, 'index']);
@@ -32,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/media', [AdminMediaController::class, 'create']);
     Route::post('/admin/media/{id}/refresh', [AdminMediaController::class, 'refresh']);
     Route::post('/admin/media/{id}/poster', [AdminMediaController::class, 'updatePoster']);
+    Route::get('/admin/media-status/{id}', [AdminMediaController::class, 'mediaStatus']);
 });
 Route::options('/stream/{id}', function () {
     return response('', 204)->withHeaders([

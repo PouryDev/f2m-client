@@ -1462,12 +1462,26 @@ const LibraryPage = () => {
     const [watchlist, setWatchlist] = useState(new Set());
     const [favorites, setFavorites] = useState(new Set());
     const [episodeProgressMap, setEpisodeProgressMap] = useState({});
+    const [mediaLoading, setMediaLoading] = useState(true);
+    const [continueWatching, setContinueWatching] = useState([]);
+    const [continueLoading, setContinueLoading] = useState(true);
 
     useEffect(() => {
+        setMediaLoading(true);
         apiFetch('/api/media', {}, token)
             .then((res) => res.json())
             .then((data) => setMedia(data.data || []))
-            .catch(() => setMedia([]));
+            .catch(() => setMedia([]))
+            .finally(() => setMediaLoading(false));
+    }, [token]);
+
+    useEffect(() => {
+        setContinueLoading(true);
+        apiFetch('/api/user/continue-watching', {}, token)
+            .then((res) => res.ok ? res.json() : [])
+            .then((data) => setContinueWatching(Array.isArray(data) ? data : []))
+            .catch(() => setContinueWatching([]))
+            .finally(() => setContinueLoading(false));
     }, [token]);
 
     useEffect(() => {
@@ -1532,6 +1546,20 @@ const LibraryPage = () => {
     const filtered = media.filter((item) =>
         `${item.title || ''}`.toLowerCase().includes(search.toLowerCase())
     );
+
+    const cinematicRows = useMemo(() => {
+        const movies = filtered.filter((item) => item.type === 'movie');
+        const series = filtered.filter((item) => item.type === 'series');
+        const topRated = [...filtered]
+            .sort((a, b) => Number(b.imdb_rating || 0) - Number(a.imdb_rating || 0))
+            .slice(0, 14);
+
+        return [
+            { key: 'movies', title: 'Movies', items: movies },
+            { key: 'series', title: 'Series', items: series },
+            { key: 'top', title: 'Top Rated', items: topRated },
+        ].filter((row) => row.items.length);
+    }, [filtered]);
 
     const flatEpisodes = useMemo(() => {
         if (!details?.seasons) return [];
@@ -1646,11 +1674,47 @@ const LibraryPage = () => {
             <div className={`layout ${isTheater ? 'theater' : ''}`}>
                 <div className={`hero-panel ${isTheater ? 'theater' : ''}`}>
                     {!details && (
-                        <div>
-                            <div style={{ fontSize: 24, fontWeight: 700 }}>Your Library</div>
-                            <div className="notice">Pick a movie or series to start watching.</div>
-                            <div className="media-grid">
-                                {filtered.map((item) => (
+                        <div className="library-stack fade-in">
+                            <div className="library-header-block">
+                                <div className="library-title">Your Library</div>
+                                <div className="notice">Pick a movie or series to start watching.</div>
+                            </div>
+
+                            <div className="cinematic-hero-scroll">
+                                <div className="section-title">Continue Watching</div>
+                                <div className="scroll-fade">
+                                    <div className="hero-carousel">
+                                        {continueLoading && Array.from({ length: 3 }).map((_, idx) => (
+                                            <div key={`continue-skeleton-${idx}`} className="hero-card skeleton-block" />
+                                        ))}
+                                        {!continueLoading && continueWatching.map((item) => (
+                                            <button
+                                                key={`continue-${item.id}`}
+                                                className="hero-card"
+                                                onClick={() => navigate(`/media/${item.id}`)}
+                                                type="button"
+                                            >
+                                                {item.poster_url ? <img src={item.poster_url} alt={item.title || 'Poster'} /> : <div className="poster-fallback">F2M</div>}
+                                                <div className="hero-card-overlay">
+                                                    <div className="hero-card-title">{item.title || 'Untitled'}</div>
+                                                    <div className="hero-progress-track"><span style={{ width: `${Math.max(0, Math.min(100, Number(item.progress_percentage || 0)))}%` }} /></div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                        {!continueLoading && continueWatching.length === 0 && <div className="notice">Nothing to resume yet.</div>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {cinematicRows.map((row) => (
+                                <div key={row.key} className="library-row-section">
+                                    <div className="section-title">{row.title}</div>
+                                    <div className="scroll-fade">
+                                        <div className="media-row">
+                                            {mediaLoading && Array.from({ length: 8 }).map((_, idx) => (
+                                                <div key={`${row.key}-skeleton-${idx}`} className="media-card skeleton-block" />
+                                            ))}
+                                            {!mediaLoading && row.items.map((item) => (
                                     <div
                                         key={item.id}
                                         className="media-card"
@@ -1687,11 +1751,18 @@ const LibraryPage = () => {
                                         </div>
                                         <div className="media-card-body">
                                             <div className="media-card-title">{item.title || 'Untitled'}</div>
-                                            <div className="media-card-meta">{item.type?.toUpperCase()} · {item.year || '—'} · {item.imdb_rating || '—'}</div>
+                                            <div className="media-card-meta">{item.year || '—'} · IMDb {item.imdb_rating || '—'}</div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {!mediaLoading && cinematicRows.length === 0 && (
+                                <div className="notice">No titles matched your search.</div>
+                            )}
                         </div>
                     )}
 
@@ -1716,16 +1787,18 @@ const LibraryPage = () => {
                 </div>
 
                 <div className="sidebar">
-                    <div className="panel">
+                    <div className="panel now-playing-panel">
                         <div className="section-title">Now Playing</div>
                         {details ? (
-                            <div>
+                            <div className="now-playing-content">
+                                <div className="now-playing-backdrop" style={{ backgroundImage: details.media?.poster_url ? `url(${details.media.poster_url})` : undefined }} />
                                 <div style={{ fontWeight: 600 }}>{details.media?.title || 'Untitled'}</div>
                                 <div className="meta-row">
-                                    <span>{details.media?.type?.toUpperCase()}</span>
                                     <span>{details.media?.year || '—'}</span>
                                     <span>IMDb {details.media?.imdb_rating || '—'}</span>
                                 </div>
+                                <div className="hero-progress-track now-playing-progress"><span style={{ width: '40%' }} /></div>
+                                <button className="btn primary" onClick={() => navigate(`/media/${details.media?.id}`)}>Quick Resume</button>
                                 <div className="notice" style={{ marginTop: 8 }}>{details.media?.synopsis}</div>
                             </div>
                         ) : (
@@ -1755,11 +1828,25 @@ const AdminPage = () => {
     const [status, setStatus] = useState('');
     const [busyId, setBusyId] = useState(null);
     const [posterBusyId, setPosterBusyId] = useState(null);
+    const [createBusy, setCreateBusy] = useState(false);
+    const [mediaStatuses, setMediaStatuses] = useState({});
 
     const loadItems = () => {
         apiFetch('/api/admin/media', {}, token)
             .then((res) => res.json())
-            .then((data) => setItems(data.data || []))
+            .then((data) => {
+                const list = data.data || [];
+                setItems(list);
+                list.forEach((item) => {
+                    apiFetch(`/api/admin/media-status/${item.id}`, {}, token)
+                        .then((res) => res.ok ? res.json() : null)
+                        .then((payload) => {
+                            if (!payload?.status) return;
+                            setMediaStatuses((prev) => ({ ...prev, [item.id]: payload.status }));
+                        })
+                        .catch(() => {});
+                });
+            })
             .catch(() => setItems([]));
     };
 
@@ -1770,6 +1857,7 @@ const AdminPage = () => {
     const handleCreate = async (event) => {
         event.preventDefault();
         setStatus('');
+        setCreateBusy(true);
         try {
             const res = await apiFetch('/api/admin/media', {
                 method: 'POST',
@@ -1792,6 +1880,8 @@ const AdminPage = () => {
             loadItems();
         } catch {
             setStatus('Create failed.');
+        } finally {
+            setCreateBusy(false);
         }
     };
 
@@ -1819,57 +1909,53 @@ const AdminPage = () => {
     };
 
     return (
-        <div className="app-shell admin-shell">
+        <div className="app-shell admin-shell fade-in">
             <div className="top-bar">
                 <div className="brand">
                     <div className="brand-mark" />
                     <div>
                         <div>Admin Panel</div>
-                        <div className="notice">Add and refresh media</div>
+                        <div className="notice">Premium internal tooling for catalog ops</div>
                     </div>
                 </div>
                 <div className="user-chip">
                     <span>{user?.name || 'Admin'}</span>
+                    <Link className="btn" to="/">Back to Library</Link>
                 </div>
             </div>
 
             <div className="admin-grid">
-                <div className="panel">
+                <div className="panel glass-panel">
                     <div className="section-title">Add Media</div>
                     <form className="admin-form" onSubmit={handleCreate}>
-                        <input
-                            className="auth-input"
-                            placeholder="Media URL"
-                            value={url}
-                            onChange={(event) => setUrl(event.target.value)}
-                            required
-                        />
-                        <input
-                            className="auth-input"
-                            placeholder="Poster URL (optional)"
-                            value={poster}
-                            onChange={(event) => setPoster(event.target.value)}
-                        />
-                        <input
-                            className="auth-input"
-                            placeholder="Title override (optional)"
-                            value={title}
-                            onChange={(event) => setTitle(event.target.value)}
-                        />
+                        <label className="field-floating">
+                            <span>Media URL</span>
+                            <input className="auth-input" value={url} onChange={(event) => setUrl(event.target.value)} required />
+                        </label>
+                        <label className="field-floating">
+                            <span>Poster URL (optional)</span>
+                            <input className="auth-input" value={poster} onChange={(event) => setPoster(event.target.value)} />
+                        </label>
+                        <label className="field-floating">
+                            <span>Title override (optional)</span>
+                            <input className="auth-input" value={title} onChange={(event) => setTitle(event.target.value)} />
+                        </label>
                         <select className="btn" value={type} onChange={(event) => setType(event.target.value)}>
                             <option value="movie">Movie</option>
                             <option value="series">Series</option>
                         </select>
-                        <button className="btn primary" type="submit">Crawl & Add</button>
+                        <button className={`btn primary crawl-cta ${createBusy ? 'is-loading' : ''}`} type="submit" disabled={createBusy}>
+                            {createBusy ? 'Crawling…' : 'Crawl & Add'}
+                        </button>
                         {status && <div className="notice">{status}</div>}
                     </form>
                 </div>
 
-                <div className="panel">
+                <div className="panel glass-panel">
                     <div className="section-title">Library</div>
                     <div className="admin-list">
                         {items.map((item) => (
-                            <div key={item.id} className="admin-item">
+                            <div key={item.id} className="admin-item table-card">
                                 <div className="admin-thumb">
                                     {item.poster_url ? (
                                         <img src={item.poster_url} alt={item.title || 'poster'} />
@@ -1879,23 +1965,15 @@ const AdminPage = () => {
                                 </div>
                                 <div className="admin-meta">
                                     <div className="admin-title">{item.title || 'Untitled'}</div>
-                                    <div className="notice">{item.type?.toUpperCase()} · {item.year || '—'}</div>
-                                    <div className="notice">Updated {item.updated_at}</div>
+                                    <div className="notice">{item.year || '—'} · IMDb {item.imdb_rating || '—'}</div>
+                                    <div className={`status-badge ${mediaStatuses[item.id] || 'ready'}`}>{mediaStatuses[item.id] || 'ready'}</div>
                                 </div>
                                 <div className="admin-actions">
                                     <label className="btn upload-btn">
                                         {posterBusyId === item.id ? 'Uploading…' : 'Upload Poster'}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(event) => handlePosterUpload(item.id, event.target.files?.[0])}
-                                        />
+                                        <input type="file" accept="image/*" onChange={(event) => handlePosterUpload(item.id, event.target.files?.[0])} />
                                     </label>
-                                    <button
-                                        className="btn"
-                                        onClick={() => handleRefresh(item.id)}
-                                        disabled={busyId === item.id}
-                                    >
+                                    <button className="btn" onClick={() => handleRefresh(item.id)} disabled={busyId === item.id}>
                                         {busyId === item.id ? 'Refreshing…' : 'Update'}
                                     </button>
                                 </div>
@@ -1910,6 +1988,7 @@ const AdminPage = () => {
 
 const AccountPage = () => {
     const { token, user } = useAuth();
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [watchlist, setWatchlist] = useState([]);
     const [favorites, setFavorites] = useState([]);
@@ -1919,7 +1998,7 @@ const AccountPage = () => {
             .then((res) => res.json())
             .then((data) => setStats(data))
             .catch(() => setStats(null));
-        apiFetch('/api/watchlist', {}, token)
+        apiFetch('/api/user/watchlist', {}, token)
             .then((res) => res.json())
             .then((data) => setWatchlist(data.data || []))
             .catch(() => setWatchlist([]));
@@ -1930,13 +2009,13 @@ const AccountPage = () => {
     }, [token]);
 
     return (
-        <div className="app-shell account-shell">
+        <div className="app-shell account-shell fade-in">
             <div className="top-bar">
                 <div className="brand">
                     <div className="brand-mark" />
                     <div>
                         <div>Account</div>
-                        <div className="notice">{user?.name || 'User'} statistics</div>
+                        <div className="notice">{user?.name || 'User'} dashboard</div>
                     </div>
                 </div>
                 <div className="user-chip">
@@ -1944,84 +2023,53 @@ const AccountPage = () => {
                 </div>
             </div>
 
-            <div className="account-grid">
-                <div className="panel">
-                    <div className="section-title">Watch Stats</div>
-                    <div className="stat-grid">
-                        <div className="stat-card">
-                            <div className="notice">Total watch time</div>
-                            <div className="stat-value">{formatSeconds(stats?.total_watch_seconds || 0)}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">Movies watched</div>
-                            <div className="stat-value">{stats?.movie_count_watched || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">Series watched</div>
-                            <div className="stat-value">{stats?.series_count_watched || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">70%+ completions</div>
-                            <div className="stat-value">{stats?.completed_70_total || 0}</div>
-                        </div>
+            <div className="account-grid cinematic-account-grid">
+                <div className="panel cinematic-stat-hero">
+                    <div className="notice">Total watch time</div>
+                    <div className="hero-stat-value">{formatSeconds(stats?.total_watch_seconds || 0)}</div>
+                    <div className="stat-inline-grid">
+                        <div className="mini-stat"><span>Movies</span><strong>{stats?.movie_count_watched || 0}</strong></div>
+                        <div className="mini-stat"><span>Series</span><strong>{stats?.series_count_watched || 0}</strong></div>
+                        <div className="mini-stat"><span>70%+</span><strong>{stats?.completed_70_total || 0}</strong></div>
                     </div>
-                    {stats?.last_watched && (
-                        <div className="panel highlight">
-                            <div className="notice">Last watched</div>
-                            <div className="stat-value">{stats.last_watched.title}</div>
-                            <div className="notice">{formatSeconds(stats.last_watched.seconds || 0)} watched</div>
-                        </div>
-                    )}
                 </div>
+
+                {stats?.last_watched && (
+                    <button className="panel last-watched-hero" type="button" onClick={() => navigate(`/media/${stats.last_watched.id}`)}>
+                        <div className="notice">Last watched</div>
+                        <div className="admin-title">{stats.last_watched.title}</div>
+                        <div className="hero-progress-track"><span style={{ width: `${Math.min(100, ((stats.last_watched.seconds || 0) / Math.max(stats.last_watched.duration_seconds || 1, 1)) * 100)}%` }} /></div>
+                        <div className="btn primary">Resume</div>
+                    </button>
+                )}
 
                 <div className="panel">
                     <div className="section-title">Watchlist</div>
-                    <div className="mini-grid">
-                        {watchlist.map((item) => (
-                            <div key={item.id} className="mini-card">
-                                {item.poster_url ? (
-                                    <img src={item.poster_url} alt={item.title || 'poster'} />
-                                ) : (
-                                    <div className="poster-fallback">F2M</div>
-                                )}
-                                <div className="mini-title">{item.title || 'Untitled'}</div>
-                            </div>
-                        ))}
-                        {watchlist.length === 0 && <div className="notice">No items yet.</div>}
+                    <div className="scroll-fade">
+                        <div className="mini-row">
+                            {watchlist.map((item) => (
+                                <button key={item.id} className="mini-card cinematic-mini-card" type="button" onClick={() => navigate(`/media/${item.id}`)}>
+                                    {item.poster_url ? <img src={item.poster_url} alt={item.title || 'poster'} /> : <div className="poster-fallback">F2M</div>}
+                                    <div className="mini-title">{item.title || 'Untitled'}</div>
+                                </button>
+                            ))}
+                            {watchlist.length === 0 && <div className="notice">No items yet.</div>}
+                        </div>
                     </div>
                 </div>
 
                 <div className="panel">
-                    <div className="section-title">Favourites</div>
-                    <div className="mini-grid">
-                        {favorites.map((item) => (
-                            <div key={item.id} className="mini-card">
-                                {item.poster_url ? (
-                                    <img src={item.poster_url} alt={item.title || 'poster'} />
-                                ) : (
-                                    <div className="poster-fallback">F2M</div>
-                                )}
-                                <div className="mini-title">{item.title || 'Untitled'}</div>
-                            </div>
-                        ))}
-                        {favorites.length === 0 && <div className="notice">No items yet.</div>}
-                    </div>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Top 70% Replays</div>
-                    <div className="admin-list">
-                        {(stats?.top_completed || []).map((item) => (
-                            <div key={item.id} className="admin-item">
-                                <div className="admin-meta">
-                                    <div className="admin-title">{item.title}</div>
-                                    <div className="notice">{item.type?.toUpperCase()} · {item.completions}x</div>
-                                </div>
-                            </div>
-                        ))}
-                        {(!stats?.top_completed || stats.top_completed.length === 0) && (
-                            <div className="notice">No completed titles yet.</div>
-                        )}
+                    <div className="section-title">Curated Collection</div>
+                    <div className="scroll-fade">
+                        <div className="mini-row">
+                            {favorites.map((item) => (
+                                <button key={item.id} className="mini-card cinematic-mini-card" type="button" onClick={() => navigate(`/media/${item.id}`)}>
+                                    {item.poster_url ? <img src={item.poster_url} alt={item.title || 'poster'} /> : <div className="poster-fallback">F2M</div>}
+                                    <div className="mini-title">{item.title || 'Untitled'}</div>
+                                </button>
+                            ))}
+                            {favorites.length === 0 && <div className="notice">No items yet.</div>}
+                        </div>
                     </div>
                 </div>
             </div>
