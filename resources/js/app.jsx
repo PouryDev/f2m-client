@@ -8,14 +8,14 @@ const Icon = ({ name, className }) => {
         case 'play':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8 5v14l11-7z" fill="currentColor" />
+                    <path d="M8.25 6.75v10.5a.75.75 0 0 0 1.128.65l8.25-5.25a.75.75 0 0 0 0-1.3l-8.25-5.25a.75.75 0 0 0-1.128.65Z" fill="currentColor" />
                 </svg>
             );
         case 'pause':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor" />
-                    <rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor" />
+                    <rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" />
+                    <rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" />
                 </svg>
             );
         case 'rewind15':
@@ -53,15 +53,15 @@ const Icon = ({ name, className }) => {
         case 'volume':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 9h4l5-4v14l-5-4H5z" fill="currentColor" />
-                    <path d="M17 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <path d="M11.25 5.653a1.125 1.125 0 0 1 1.913.796v11.102a1.125 1.125 0 0 1-1.913.796l-3.26-3.26H5.25A2.25 2.25 0 0 1 3 12.837v-1.674A2.25 2.25 0 0 1 5.25 8.913h2.74l3.26-3.26Z" fill="currentColor" />
+                    <path d="M16.5 9.75a3.75 3.75 0 0 1 0 4.5M18.75 7.5a7.125 7.125 0 0 1 0 9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
         case 'mute':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 9h4l5-4v14l-5-4H5z" fill="currentColor" />
-                    <path d="m17 8 4 8m0-8-4 8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <path d="M11.25 5.653a1.125 1.125 0 0 1 1.913.796v11.102a1.125 1.125 0 0 1-1.913.796l-3.26-3.26H5.25A2.25 2.25 0 0 1 3 12.837v-1.674A2.25 2.25 0 0 1 5.25 8.913h2.74l3.26-3.26Z" fill="currentColor" />
+                    <path d="m16.5 9 4.5 6m0-6-4.5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
         case 'pip':
@@ -80,28 +80,26 @@ const Icon = ({ name, className }) => {
         case 'episodes':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="5" y="5" width="4" height="4" rx="1" fill="currentColor" />
-                    <rect x="5" y="11" width="4" height="4" rx="1" fill="currentColor" />
-                    <rect x="5" y="17" width="4" height="4" rx="1" fill="currentColor" />
-                    <rect x="11" y="6" width="8" height="2" rx="1" fill="currentColor" />
-                    <rect x="11" y="12" width="8" height="2" rx="1" fill="currentColor" />
-                    <rect x="11" y="18" width="8" height="2" rx="1" fill="currentColor" />
+                    <rect x="4" y="5" width="3" height="3" rx="0.75" fill="currentColor" />
+                    <rect x="4" y="10.5" width="3" height="3" rx="0.75" fill="currentColor" />
+                    <rect x="4" y="16" width="3" height="3" rx="0.75" fill="currentColor" />
+                    <path d="M10 6.5h10M10 12h10M10 17.5h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
             );
         case 'sources':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="7" cy="12" r="3" fill="currentColor" />
-                    <circle cx="17" cy="7" r="3" fill="currentColor" />
-                    <circle cx="17" cy="17" r="3" fill="currentColor" />
-                    <path d="M9.5 10.5 14 8.5M9.5 13.5 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    <circle cx="6.25" cy="12" r="2.75" fill="currentColor" />
+                    <circle cx="17.75" cy="6.75" r="2.75" fill="currentColor" />
+                    <circle cx="17.75" cy="17.25" r="2.75" fill="currentColor" />
+                    <path d="m8.7 10.9 6.6-2.9m-6.6 5.2 6.6 2.9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
         case 'theater':
             return (
                 <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="3.5" y="5" width="17" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                    <rect x="6.5" y="8" width="11" height="6" rx="1.5" fill="currentColor" />
+                    <rect x="3.5" y="4.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M6.5 8.25h11v5.5h-11z" fill="currentColor" />
                 </svg>
             );
         case 'close':
