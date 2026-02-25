@@ -1642,6 +1642,17 @@ const LibraryPage = () => {
         ].filter((row) => row.items.length);
     }, [filtered]);
 
+    const libraryStats = useMemo(() => {
+        const movieCount = media.filter((item) => item.type === 'movie').length;
+        const seriesCount = media.filter((item) => item.type === 'series').length;
+        const topRating = media.reduce((best, item) => Math.max(best, Number(item.imdb_rating || 0)), 0);
+        return {
+            movieCount,
+            seriesCount,
+            topRating: topRating > 0 ? topRating.toFixed(1) : '—',
+        };
+    }, [media]);
+
     const flatEpisodes = useMemo(() => {
         if (!details?.seasons) return [];
         const list = [];
@@ -1729,8 +1740,8 @@ const LibraryPage = () => {
                 <div className="brand">
                     <div className="brand-mark" />
                     <div>
-                        <div>F2M HyperPlayer</div>
-                        <div className="notice">Crawl → Curate → Watch</div>
+                        <div>F2M PRIME</div>
+                        <div className="notice">A premium cinematic library experience</div>
                     </div>
                 </div>
                 <div className="search-bar">
@@ -1757,8 +1768,22 @@ const LibraryPage = () => {
                     {!details && (
                         <div className="library-stack fade-in">
                             <div className="library-header-block">
-                                <div className="library-title">Your Library</div>
-                                <div className="notice">Pick a movie or series to start watching.</div>
+                                <div className="library-title">Discover your next obsession</div>
+                                <div className="notice">Cinematic rows with smoother carousel motion on desktop and mobile.</div>
+                                <div className="library-kpi-grid">
+                                    <div className="library-kpi-item">
+                                        <span>Movies</span>
+                                        <strong>{libraryStats.movieCount}</strong>
+                                    </div>
+                                    <div className="library-kpi-item">
+                                        <span>Series</span>
+                                        <strong>{libraryStats.seriesCount}</strong>
+                                    </div>
+                                    <div className="library-kpi-item">
+                                        <span>Top IMDb</span>
+                                        <strong>{libraryStats.topRating}</strong>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="cinematic-hero-scroll">
