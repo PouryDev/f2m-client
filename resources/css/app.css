@@ -1586,3 +1586,193 @@ button:focus-visible, input:focus-visible, select:focus-visible, .media-card:foc
     outline: 2px solid rgba(104,168,255,0.9);
     outline-offset: 2px;
 }
+
+/* Premium polish layer */
+html,
+body,
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 166, 255, 0.55) rgba(255, 255, 255, 0.08);
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(104, 168, 255, 0.85), rgba(255, 77, 141, 0.85));
+    border: 2px solid rgba(8, 10, 14, 0.9);
+}
+
+.top-bar {
+    padding: 14px 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(145deg, rgba(20, 24, 34, 0.92), rgba(12, 14, 20, 0.86));
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 42px rgba(0, 0, 0, 0.32);
+}
+
+.user-chip {
+    gap: 8px;
+    padding: 8px;
+}
+
+.user-chip > span {
+    padding-inline: 6px;
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.carousel-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.carousel-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    padding: 0;
+}
+
+.carousel-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.media-row,
+.hero-carousel {
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 8px;
+}
+
+.media-row > *,
+.hero-carousel > * {
+    scroll-snap-align: start;
+}
+
+.media-row {
+    padding-inline: 4px;
+}
+
+.media-row .media-card {
+    overflow: visible;
+}
+
+.media-row .media-card-media {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.media-row .media-card img {
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), filter 320ms ease;
+}
+
+.media-row .media-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, rgba(104, 168, 255, 0.5), rgba(255, 77, 141, 0.4)) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity var(--transition-standard);
+    pointer-events: none;
+}
+
+.media-row .media-card:hover::before,
+.media-row .media-card:focus-within::before {
+    opacity: 1;
+}
+
+.media-row .media-card:hover img,
+.media-row .media-card:focus-within img {
+    transform: scale(1.06);
+    filter: saturate(1.08) contrast(1.03);
+}
+
+.media-row .media-card-body {
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0;
+    color: rgba(245, 247, 255, 0.92);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease, box-shadow 200ms ease;
+}
+
+.action-btn .icon {
+    width: 15px;
+    height: 15px;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    background: rgba(8, 10, 14, 0.92);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.34);
+}
+
+.action-btn.active {
+    box-shadow: 0 10px 24px rgba(255, 77, 141, 0.38);
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideInBackBtn 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.back-btn .icon {
+    width: 16px;
+    height: 16px;
+}
+
+@keyframes slideInBackBtn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.panel,
+.auth-card,
+.admin-item,
+.stat-card,
+.last-watched-hero {
+    transition: transform var(--transition-standard), box-shadow var(--transition-standard), border-color var(--transition-standard);
+}
+
+.panel:hover,
+.auth-card:hover,
+.stat-card:hover,
+.last-watched-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+    border-color: rgba(145, 181, 255, 0.38);
+}

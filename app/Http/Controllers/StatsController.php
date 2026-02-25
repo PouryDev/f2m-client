@@ -68,8 +68,18 @@ class StatsController extends Controller
     {
         $userId = $request->user()->id;
 
+        $latestPerMedia = MediaProgress::query()
+            ->select('media_id', DB::raw('MAX(updated_at) as latest_updated_at'))
+            ->where('user_id', $userId)
+            ->where('seconds', '>', 0)
+            ->groupBy('media_id');
+
         $items = MediaProgress::query()
             ->join('media_items', 'media_items.id', '=', 'media_progress.media_id')
+            ->joinSub($latestPerMedia, 'latest_progress', function ($join) {
+                $join->on('latest_progress.media_id', '=', 'media_progress.media_id')
+                    ->on('latest_progress.latest_updated_at', '=', 'media_progress.updated_at');
+            })
             ->where('media_progress.user_id', $userId)
             ->where('media_progress.seconds', '>', 0)
             ->select([
