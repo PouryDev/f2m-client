@@ -24,8 +24,11 @@ class F2mCrawler
         $posterUrl = $this->firstNonEmpty([
             Arr::get($headMeta, 'og:image'),
             Arr::get($headMeta, 'twitter:image'),
-            $this->attrByXPath($dom, "//img[contains(@class,'poster') or contains(@class,'cover') or contains(@class,'thumb')][1]", 'src'),
-            $this->attrByXPath($dom, "//img[contains(@src,'poster') or contains(@src,'cover')][1]", 'src'),
+            $this->imageUrlByXPath($dom, "//figure[contains(@class,'entry-poster')]//img[1]"),
+            $this->imageUrlByXPath($dom, "//div[contains(@class,'entry-poster')]//img[1]"),
+            $this->imageUrlByXPath($dom, "//img[contains(@class,'poster') or contains(@class,'cover') or contains(@class,'thumb')][1]"),
+            $this->imageUrlByXPath($dom, "//img[contains(@src,'poster') or contains(@src,'cover')][1]"),
+            $this->imageUrlByXPath($dom, "//article//img[1]"),
         ]);
         $posterUrl = $this->resolveUrl($url, $posterUrl);
 
@@ -113,6 +116,30 @@ class F2mCrawler
         $value = $node->attributes->getNamedItem($attr)?->nodeValue;
 
         return $value ? trim($value) : null;
+    }
+
+    private function imageUrlByXPath(\DOMDocument $dom, string $query): ?string
+    {
+        $node = $this->xpath($dom)->query($query)->item(0);
+        if (! $node || ! $node->attributes) {
+            return null;
+        }
+
+        foreach (['src', 'data-src', 'data-lazy-src', 'data-original'] as $attr) {
+            $value = trim((string) $node->attributes->getNamedItem($attr)?->nodeValue);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        $srcset = trim((string) $node->attributes->getNamedItem('srcset')?->nodeValue);
+        if ($srcset === '') {
+            return null;
+        }
+
+        $firstCandidate = trim(Str::before($srcset, ','));
+
+        return trim((string) Str::before($firstCandidate, ' ')) ?: null;
     }
 
     private function extractHeadMeta(\DOMDocument $dom): array
