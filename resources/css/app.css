@@ -1973,6 +1973,39 @@ body {
     box-shadow: 0 10px 25px rgba(2, 5, 14, 0.52), 0 0 16px rgba(111, 123, 255, 0.3);
 }
 
+
+/* Home cards: disable hover animations for a cleaner premium look */
+.library-stack .media-row .media-card,
+.library-stack .hero-card {
+    transition: none;
+}
+
+.library-stack .media-row .media-card:hover,
+.library-stack .media-row .media-card:focus-within,
+.library-stack .hero-card:hover,
+.library-stack .hero-card:focus-within {
+    transform: none;
+    box-shadow: inherit;
+    border-color: inherit;
+}
+
+.library-stack .media-row .media-card::before,
+.library-stack .media-row .media-card:hover::before,
+.library-stack .media-row .media-card:focus-within::before {
+    opacity: 0;
+}
+
+.library-stack .media-row .media-card img,
+.library-stack .media-row .media-card:hover img,
+.library-stack .media-row .media-card:focus-within img {
+    transform: none;
+    filter: none;
+}
+
+.library-stack .media-row .media-card-body {
+    transform: none;
+}
+
 @media (max-width: 900px) {
     .top-bar {
         position: static;

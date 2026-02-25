@@ -1351,10 +1351,11 @@ const Player = ({
 };
 
 
-const CarouselRail = ({ title, children, className = '', emptyMessage = '' }) => {
+const CarouselRail = ({ title, children, className = '', emptyMessage = '', autoSlide = false }) => {
     const railRef = useRef(null);
     const [canPrev, setCanPrev] = useState(false);
     const [canNext, setCanNext] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     const syncButtons = () => {
         const node = railRef.current;
@@ -1383,8 +1384,31 @@ const CarouselRail = ({ title, children, className = '', emptyMessage = '' }) =>
 
     const childCount = React.Children.count(children);
 
+    useEffect(() => {
+        if (!autoSlide || childCount < 2 || isHovered) return;
+        const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        if (prefersReducedMotion) return;
+
+        const timer = window.setInterval(() => {
+            const node = railRef.current;
+            if (!node) return;
+            const isAtEnd = node.scrollLeft + node.clientWidth >= node.scrollWidth - 10;
+            if (isAtEnd) {
+                node.scrollTo({ left: 0, behavior: 'smooth' });
+                return;
+            }
+            node.scrollBy({ left: Math.max(280, node.clientWidth * 0.72), behavior: 'smooth' });
+        }, 5200);
+
+        return () => window.clearInterval(timer);
+    }, [autoSlide, childCount, isHovered]);
+
     return (
-        <div className={`library-row-section ${className}`.trim()}>
+        <div
+            className={`library-row-section ${className}`.trim()}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             <div className="section-head">
                 <div className="section-title">{title}</div>
                 <div className="carousel-nav">
@@ -1809,7 +1833,7 @@ const LibraryPage = () => {
                             </div>
 
                             {cinematicRows.map((row) => (
-                                <CarouselRail key={row.key} title={row.title} emptyMessage={!mediaLoading ? 'No titles in this row yet.' : ''}>
+                                <CarouselRail key={row.key} title={row.title} autoSlide emptyMessage={!mediaLoading ? 'No titles in this row yet.' : ''}>
                                     {mediaLoading && Array.from({ length: 8 }).map((_, idx) => (
                                         <div key={`${row.key}-skeleton-${idx}`} className="media-card skeleton-block" />
                                     ))}
