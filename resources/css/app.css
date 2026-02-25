@@ -2090,3 +2090,11 @@ body {
     min-width: 0;
     max-width: 100%;
 }
+
+.layout.full-width {
+    grid-template-columns: 1fr;
+}
+
+.layout.full-width .sidebar {
+    display: none;
+}

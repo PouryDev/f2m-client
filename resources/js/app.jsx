@@ -1787,7 +1787,7 @@ const LibraryPage = () => {
                 </div>
             </div>
 
-            <div className={`layout ${isTheater ? 'theater' : ''}`}>
+            <div className={`layout ${isTheater ? 'theater' : ''} ${!details ? 'full-width' : ''}`}>
                 <div className={`hero-panel ${isTheater ? 'theater' : ''}`}>
                     {!details && (
                         <div className="library-stack fade-in">
