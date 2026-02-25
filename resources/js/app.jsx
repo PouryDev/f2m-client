@@ -326,6 +326,9 @@ const Player = ({
     const lastTapRef = useRef(0);
     const episodeChangedRef = useRef(false);
     const appliedSourceRef = useRef('');
+    const qualitySwitchMetaRef = useRef(null);
+    const qualitySwitchingRef = useRef(false);
+    const stalledRef = useRef(false);
 
     const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 
@@ -714,16 +717,61 @@ const Player = ({
         }
     }, [currentSeasonNumber]);
 
-    const setQuality = (download) => {
+    const preloadSource = (url) => new Promise((resolve) => {
+        if (!url) {
+            resolve(false);
+            return;
+        }
+        const probe = document.createElement('video');
+        probe.preload = 'auto';
+        probe.src = url;
+        let done = false;
+        const finalize = (result) => {
+            if (done) return;
+            done = true;
+            probe.removeAttribute('src');
+            probe.load();
+            resolve(result);
+        };
+        const timeout = window.setTimeout(() => finalize(false), 1800);
+        probe.addEventListener('canplay', () => {
+            window.clearTimeout(timeout);
+            finalize(true);
+        }, { once: true });
+        probe.addEventListener('error', () => {
+            window.clearTimeout(timeout);
+            finalize(false);
+        }, { once: true });
+        probe.load();
+    });
+
+    const setQuality = async (download, options = {}) => {
         if (!download) return;
+        const { smooth = false } = options;
         const nextUrl = getPlayUrl(download);
         const currentUrl = getPlayUrl(current);
         if (nextUrl && currentUrl && nextUrl === currentUrl) return;
 
         const video = videoRef.current;
-        if (video && !episodeChangedRef.current) {
-            resumeTimeRef.current = video.currentTime || 0;
+        if (!video || episodeChangedRef.current) {
+            qualitySwitchMetaRef.current = null;
+            setCurrent(download);
+            return;
         }
+
+        const snapshot = {
+            time: video.currentTime || 0,
+            wasPlaying: !video.paused,
+            playbackRate,
+        };
+
+        if (smooth && snapshot.wasPlaying) {
+            if (qualitySwitchingRef.current) return;
+            qualitySwitchingRef.current = true;
+            await preloadSource(nextUrl);
+        }
+
+        qualitySwitchMetaRef.current = snapshot;
         setCurrent(download);
     };
 
@@ -739,8 +787,11 @@ const Player = ({
         const sourceUrl = getPlayUrl(current);
         if (!sourceUrl || appliedSourceRef.current === sourceUrl) return;
 
+        const switchMeta = qualitySwitchMetaRef.current;
         if (episodeChangedRef.current) {
             resumeTimeRef.current = 0;
+        } else if (switchMeta && Number.isFinite(switchMeta.time)) {
+            resumeTimeRef.current = switchMeta.time;
         }
         appliedSourceRef.current = sourceUrl;
         episodeChangedRef.current = false;
@@ -748,14 +799,22 @@ const Player = ({
         const playNext = async () => {
             try {
                 video.load();
-                await video.play();
-                setPlaying(true);
+                video.playbackRate = switchMeta?.playbackRate || playbackRate;
+                if (switchMeta?.wasPlaying ?? true) {
+                    await video.play();
+                    setPlaying(true);
+                } else {
+                    setPlaying(false);
+                }
             } catch (error) {
                 setPlaying(false);
+            } finally {
+                qualitySwitchMetaRef.current = null;
+                qualitySwitchingRef.current = false;
             }
         };
         playNext();
-    }, [current]);
+    }, [current, playbackRate]);
 
     useEffect(() => {
         const handleOrientation = () => {
@@ -780,21 +839,23 @@ const Player = ({
     useEffect(() => {
         if (!autoQuality || !downloadsForLanguage.length || !current) return;
         const now = Date.now();
-        if (now - autoSwitchRef.current < 6000) return;
+        if (now - autoSwitchRef.current < 9000) return;
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || video.paused || qualitySwitchingRef.current) return;
         const buffered = video.buffered;
         if (!buffered || buffered.length === 0) return;
         const bufferEnd = buffered.end(buffered.length - 1);
         const bufferAhead = bufferEnd - video.currentTime;
 
         const currentIndex = downloadsForLanguage.findIndex((item) => item.url === current.url);
-        if (bufferAhead < 4 && currentIndex < downloadsForLanguage.length - 1) {
+        if (currentIndex < 0) return;
+
+        if (bufferAhead < 2 && currentIndex < downloadsForLanguage.length - 1 && (loading || stalledRef.current)) {
             autoSwitchRef.current = now;
-            setQuality(downloadsForLanguage[currentIndex + 1]);
-        } else if (bufferAhead > 20 && currentIndex > 0) {
+            setQuality(downloadsForLanguage[currentIndex + 1], { smooth: true });
+        } else if (bufferAhead > 30 && currentIndex > 0 && !loading && !stalledRef.current) {
             autoSwitchRef.current = now;
-            setQuality(downloadsForLanguage[currentIndex - 1]);
+            setQuality(downloadsForLanguage[currentIndex - 1], { smooth: true });
         }
     }, [autoQuality, downloadsForLanguage, current, time, loading]);
 
@@ -845,11 +906,11 @@ const Player = ({
                         onProgress={onProgress}
                         onLoadedMetadata={onLoaded}
                         onLoadStart={() => setLoading(true)}
-                        onWaiting={() => setLoading(true)}
-                        onCanPlay={() => setLoading(false)}
-                        onCanPlayThrough={() => setLoading(false)}
+                        onWaiting={() => { setLoading(true); stalledRef.current = true; }}
+                        onCanPlay={() => { setLoading(false); stalledRef.current = false; }}
+                        onCanPlayThrough={() => { setLoading(false); stalledRef.current = false; }}
                         onLoadedData={() => setLoading(false)}
-                        onPlaying={() => setLoading(false)}
+                        onPlaying={() => { setLoading(false); stalledRef.current = false; }}
                         onError={() => setLoading(false)}
                         onEnded={onEndedInternal}
                         onPlay={() => {
@@ -1071,7 +1132,7 @@ const Player = ({
                                                     className={`pill ${!autoQuality && current?.url === download.url ? 'active' : ''}`}
                                                     onClick={() => {
                                                         setAutoQuality(false);
-                                                        setQuality(download);
+                                                        setQuality(download, { smooth: false });
                                                         setQualityOpen(false);
                                                     }}
                                                 >
@@ -1226,7 +1287,7 @@ const Player = ({
                                     className={`pill ${!autoQuality && current?.url === download.url ? 'active' : ''}`}
                                     onClick={() => {
                                         setAutoQuality(false);
-                                        setQuality(download);
+                                        setQuality(download, { smooth: false });
                                     }}
                                 >
                                     {pickQualityLabel(download)}
