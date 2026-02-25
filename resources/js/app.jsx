@@ -1,174 +1,36 @@
-import React, { useEffect, useMemo, useRef, useState, useContext, createContext } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, Link } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-const Icon = ({ name, className }) => {
-    const classes = ['icon', className].filter(Boolean).join(' ');
+const Icon = ({ name, className = 'size-4' }) => {
+    const classes = className;
     switch (name) {
-        case 'play':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8.25 6.75v10.5a.75.75 0 0 0 1.128.65l8.25-5.25a.75.75 0 0 0 0-1.3l-8.25-5.25a.75.75 0 0 0-1.128.65Z" fill="currentColor" />
-                </svg>
-            );
-        case 'pause':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" />
-                    <rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" />
-                </svg>
-            );
-        case 'rewind15':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M11 6 6 12l5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M18 6l-5 6 5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">15</text>
-                </svg>
-            );
-        case 'rewind5':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M11 6 6 12l5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M18 6l-5 6 5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">5</text>
-                </svg>
-            );
-        case 'forward15':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M13 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M6 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">15</text>
-                </svg>
-            );
-        case 'forward5':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M13 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M6 6l5 6-5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    <text x="12" y="15.5" textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor">5</text>
-                </svg>
-            );
-        case 'volume':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M11.25 5.653a1.125 1.125 0 0 1 1.913.796v11.102a1.125 1.125 0 0 1-1.913.796l-3.26-3.26H5.25A2.25 2.25 0 0 1 3 12.837v-1.674A2.25 2.25 0 0 1 5.25 8.913h2.74l3.26-3.26Z" fill="currentColor" />
-                    <path d="M16.5 9.75a3.75 3.75 0 0 1 0 4.5M18.75 7.5a7.125 7.125 0 0 1 0 9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            );
-        case 'mute':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M11.25 5.653a1.125 1.125 0 0 1 1.913.796v11.102a1.125 1.125 0 0 1-1.913.796l-3.26-3.26H5.25A2.25 2.25 0 0 1 3 12.837v-1.674A2.25 2.25 0 0 1 5.25 8.913h2.74l3.26-3.26Z" fill="currentColor" />
-                    <path d="m16.5 9 4.5 6m0-6-4.5 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            );
-        case 'pip':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="3.5" y="5" width="17" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                    <rect x="12" y="10" width="6.5" height="4.5" rx="1" fill="currentColor" />
-                </svg>
-            );
-        case 'fullscreen':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8 4H4v4m12-4h4v4m0 12h-4v-4M4 20h4v-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            );
-        case 'episodes':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="4" y="5" width="3" height="3" rx="0.75" fill="currentColor" />
-                    <rect x="4" y="10.5" width="3" height="3" rx="0.75" fill="currentColor" />
-                    <rect x="4" y="16" width="3" height="3" rx="0.75" fill="currentColor" />
-                    <path d="M10 6.5h10M10 12h10M10 17.5h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-            );
-        case 'sources':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="6.25" cy="12" r="2.75" fill="currentColor" />
-                    <circle cx="17.75" cy="6.75" r="2.75" fill="currentColor" />
-                    <circle cx="17.75" cy="17.25" r="2.75" fill="currentColor" />
-                    <path d="m8.7 10.9 6.6-2.9m-6.6 5.2 6.6 2.9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            );
-        case 'theater':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="3.5" y="4.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                    <path d="M6.5 8.25h11v5.5h-11z" fill="currentColor" />
-                </svg>
-            );
-        case 'close':
-            return (
-                <svg className={classes} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-            );
-        default:
-            return null;
+        case 'play': return <svg className={classes} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>;
+        case 'pause': return <svg className={classes} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>;
+        case 'search': return <svg className={classes} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>;
+        case 'close': return <svg className={classes} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m6 6 12 12M18 6 6 18" /></svg>;
+        case 'skipBack': return <svg className={classes} viewBox="0 0 24 24" fill="currentColor"><path d="M11 6 3 12l8 6V6Zm2 0h8v12h-8V6Z"/></svg>;
+        case 'skipForward': return <svg className={classes} viewBox="0 0 24 24" fill="currentColor"><path d="m13 6 8 6-8 6V6ZM3 6h8v12H3V6Z"/></svg>;
+        default: return <span className={classes}>•</span>;
     }
 };
 
-const formatTime = (value) => {
-    if (!Number.isFinite(value)) return '0:00';
-    const minutes = Math.floor(value / 60);
-    const seconds = Math.floor(value % 60).toString().padStart(2, '0');
-    return `${minutes}:${seconds}`;
-};
-
-const pickQualityLabel = (download) => {
-    const parts = [];
-    if (download.quality) parts.push(download.quality);
-    if (download.format) parts.push(download.format.toUpperCase());
-    if (download.language) parts.push(download.language.toUpperCase());
-    return parts.join(' · ') || download.label || 'Download';
-};
-
-const getPlayUrl = (download) => download?.stream_url || download?.url || '';
-const isHlsSource = (url) => /\.m3u8(\?|#|$)/i.test(url || '');
-
-const getResumeKey = (mediaId, episodeId) => {
-    if (!mediaId) return null;
-    return episodeId ? `f2m:resume:${mediaId}:${episodeId}` : `f2m:resume:${mediaId}`;
-};
-
 const AuthContext = createContext(null);
-
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
-const MOBILE_SEEK_SECONDS = 15;
-const DESKTOP_SEEK_SECONDS = 5;
 
 const apiFetch = (url, options = {}, token) => {
     const fullUrl = API_BASE && url.startsWith('/') ? `${API_BASE}${url}` : url;
     const headers = { ...(options.headers || {}) };
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
-    const requestOptions = {
-        ...options,
-        headers,
-    };
-    if (!requestOptions.cache) {
-        requestOptions.cache = 'no-store';
-    }
-    return fetch(fullUrl, requestOptions);
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(fullUrl, { ...options, headers, cache: 'no-store' });
 };
 
-const apiFetchForm = (url, formData, token) => {
-    const fullUrl = API_BASE && url.startsWith('/') ? `${API_BASE}${url}` : url;
-    const headers = {};
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
-    return fetch(fullUrl, {
-        method: 'POST',
-        headers,
-        body: formData,
-    });
+const formatTime = (value) => {
+    if (!Number.isFinite(value) || value <= 0) return '0:00';
+    const h = Math.floor(value / 3600);
+    const m = Math.floor((value % 3600) / 60);
+    const s = Math.floor(value % 60).toString().padStart(2, '0');
+    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s}` : `${m}:${s}`;
 };
 
 const AuthProvider = ({ children }) => {
@@ -176,1894 +38,226 @@ const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
 
     useEffect(() => {
-        if (!token) {
-            setUser(null);
-            return;
-        }
-        apiFetch('/api/auth/user', {}, token)
-            .then((res) => res.ok ? res.json() : null)
-            .then((data) => setUser(data?.user || null))
-            .catch(() => setUser(null));
+        if (!token) return setUser(null);
+        apiFetch('/api/auth/user', {}, token).then((res) => res.ok ? res.json() : null).then((data) => setUser(data?.user || null)).catch(() => setUser(null));
     }, [token]);
 
     const login = async (payload) => {
-        const res = await apiFetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-            throw new Error('Login failed');
-        }
+        const res = await apiFetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!res.ok) throw new Error('Login failed');
         const data = await res.json();
-        const nextToken = data?.token || '';
-        localStorage.setItem('f2m:token', nextToken);
-        setToken(nextToken);
+        localStorage.setItem('f2m:token', data?.token || '');
+        setToken(data?.token || '');
         setUser(data?.user || null);
     };
 
     const register = async (payload) => {
-        const res = await apiFetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-            throw new Error('Register failed');
-        }
+        const res = await apiFetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!res.ok) throw new Error('Register failed');
         const data = await res.json();
-        const nextToken = data?.token || '';
-        localStorage.setItem('f2m:token', nextToken);
-        setToken(nextToken);
+        localStorage.setItem('f2m:token', data?.token || '');
+        setToken(data?.token || '');
         setUser(data?.user || null);
     };
 
     const logout = async () => {
-        if (token) {
-            apiFetch('/api/auth/logout', { method: 'POST' }, token).catch(() => {});
-        }
+        if (token) apiFetch('/api/auth/logout', { method: 'POST' }, token).catch(() => {});
         localStorage.removeItem('f2m:token');
-        sessionStorage.removeItem('f2m:token');
         setToken('');
         setUser(null);
     };
 
-    return (
-        <AuthContext.Provider value={{ token, user, login, register, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+    return <AuthContext.Provider value={{ token, user, login, register, logout }}>{children}</AuthContext.Provider>;
 };
 
 const useAuth = () => useContext(AuthContext);
+const RequireAuth = ({ children }) => useAuth().token ? children : <Navigate to="/login" replace />;
 
-const formatSeconds = (seconds) => {
-    if (!Number.isFinite(seconds) || seconds <= 0) return '0m';
-    const totalMinutes = Math.floor(seconds / 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+const TopNav = ({ search, setSearch, suggestions, active, onPickSuggestion }) => {
+    const { user, logout } = useAuth();
+    const nav = [{ label: 'Watch', to: '/' }, { label: 'Curate', to: '/account' }, { label: 'Crawl', to: '/admin' }];
+    return (
+        <header className="fixed inset-x-0 top-0 z-50 border-b border-[#2A2A2A] bg-[#0F0F0F]/95 backdrop-blur-xl">
+            <div className="mx-auto flex h-18 max-w-[1600px] items-center gap-4 px-4 md:px-8" dir="ltr">
+                <Link to="/" className="group flex items-center gap-3"><div className="grid size-10 place-content-center rounded-xl bg-[#1A1A1A] ring-1 ring-[#2A2A2A] text-[#FF2D55]">F2M</div><div><div className="text-sm font-semibold tracking-[0.18em]">F2M</div><div className="text-base font-bold text-[#FF2D55]">HyperPlayer</div></div></Link>
+                <nav className="hidden items-center gap-2 lg:flex">
+                    {nav.map((item) => {
+                        const isActive = active === item.to;
+                        return <Link key={item.to} to={item.to} className={`group relative rounded-full px-4 py-2 text-sm font-semibold transition ${isActive ? 'text-[#F1F1F1]' : 'text-[#A0A0A0] hover:text-[#F1F1F1]'}`}><span>{item.label}</span><span className={`absolute bottom-0 left-4 right-4 h-0.5 bg-[#FF2D55] transition ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} /></Link>;
+                    })}
+                </nav>
+                <div className="relative mx-auto hidden w-full max-w-xl md:block"><Icon name="search" className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#A0A0A0]" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search movies and episodes" className="w-full rounded-full border border-[#2A2A2A] bg-[#1A1A1A] py-2.5 pl-11 pr-4 text-sm outline-none transition focus:border-[#FF2D55]" />{suggestions.length > 0 && <div className="absolute mt-2 w-full overflow-hidden rounded-2xl border border-[#2A2A2A] bg-[#161616] shadow-2xl shadow-[#FF2D55]/20">{suggestions.map((item) => <button key={item.id} onClick={() => onPickSuggestion(item.id)} className="flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-[#202020]"><span>{item.title}</span><span className="text-[#A0A0A0]">{item.year || '—'}</span></button>)}</div>}</div>
+                <div className="ml-auto flex items-center gap-2 text-sm"><span className="rounded-full border border-[#2A2A2A] px-3 py-1.5 text-[#A0A0A0]">PK</span><Link className="rounded-full border border-[#2A2A2A] px-3 py-1.5" to="/account">Account</Link>{user?.is_admin && <Link className="rounded-full border border-[#2A2A2A] px-3 py-1.5" to="/admin">Admin</Link>}<button onClick={logout} className="rounded-full border border-[#2A2A2A] px-3 py-1.5 transition hover:border-[#FF2D55]">Logout</button></div>
+            </div>
+        </header>
+    );
 };
 
-const qualityRank = (value) => {
-    if (!value) return 0;
-    const lowered = String(value).toLowerCase();
-    if (lowered.includes('4k')) return 2160;
-    const match = lowered.match(/(2160|1440|1080|720|480|360)/);
-    return match ? Number(match[1]) : 0;
-};
+const PosterCard = ({ item, progress = 0, onClick }) => (
+    <button onClick={onClick} className="group relative w-[280px] shrink-0 overflow-hidden rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] text-left shadow-lg transition duration-300 hover:scale-105 hover:shadow-[0_20px_48px_rgba(255,45,85,0.25)]">
+        <div className="relative aspect-video overflow-hidden">{item.poster_url ? <img src={item.poster_url} alt={item.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" /> : <div className="grid h-full place-content-center bg-[#242424] text-[#A0A0A0]">No Poster</div>}<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" /><div className="absolute bottom-0 left-0 right-0 p-4"><h3 className="line-clamp-1 text-sm font-semibold">{item.title}</h3><p className="text-xs text-[#A0A0A0]">{item.year || 'Unknown year'} · {(item.type || 'title').toUpperCase()}</p><div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#FF2D55]" style={{ width: `${Math.max(4, progress)}%` }} /></div></div></div>
+    </button>
+);
 
-const getLanguageKey = (download) => download?.language || 'other';
+const RowSection = ({ title, items, loading, onSelect, progressMap }) => (
+    <section className="space-y-3">
+        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{title}</h2><button className="text-xs font-medium text-[#A0A0A0] transition hover:text-[#F1F1F1]">See all</button></div>
+        {loading ? <div className="flex gap-4 overflow-hidden">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="shimmer h-[158px] w-[280px] shrink-0 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A]" />)}</div> : <div className="scrollbar-none flex gap-4 overflow-x-auto pb-2">{items.map((item) => <PosterCard key={`${title}-${item.id}`} item={item} progress={progressMap[item.id] || 0} onClick={() => onSelect(item.id)} />)}</div>}
+    </section>
+);
 
-const languageLabel = (key) => {
-    if (key === 'dub') return 'Dub';
-    if (key === 'sub') return 'Sub';
-    if (key === 'original') return 'Original';
-    return 'Other';
-};
-
-const sortDownloads = (downloads) => {
-    const rank = (quality) => {
-        if (!quality) return 0;
-        if (quality.includes('2160')) return 6;
-        if (quality.includes('1440')) return 5;
-        if (quality.includes('1080')) return 4;
-        if (quality.includes('720')) return 3;
-        if (quality.includes('480')) return 2;
-        if (quality.includes('360')) return 1;
-        return 0;
-    };
-
-    return [...downloads].sort((a, b) => rank(b.quality) - rank(a.quality));
-};
-
-const Player = ({
-    title,
-    mediaId,
-    episodeId,
-    token,
-    downloads,
-    onEnded,
-    autoPlayNext,
-    onToggleAutoplay,
-    showAutoplay,
-    episodes,
-    currentEpisodeIndex,
-    onSelectEpisode,
-    onTheaterChange,
-    episodeProgressMap,
-}) => {
+const Player = ({ activeItem, details, onClose, autoNext, setAutoNext }) => {
+    const { token } = useAuth();
     const videoRef = useRef(null);
-    const containerRef = useRef(null);
-    const [current, setCurrent] = useState(downloads[0] || null);
-    const [playing, setPlaying] = useState(false);
-    const [muted, setMuted] = useState(false);
-    const [volume, setVolume] = useState(0.8);
-    const [time, setTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [playbackRate, setPlaybackRate] = useState(1);
-    const [theater, setTheater] = useState(false);
-    const [showOverlay, setShowOverlay] = useState(false);
-    const [controlsVisible, setControlsVisible] = useState(true);
-    const [loading, setLoading] = useState(false);
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const [activeSubtitle, setActiveSubtitle] = useState(null);
-    const [subtitleOpen, setSubtitleOpen] = useState(false);
-    const [bufferedPercent, setBufferedPercent] = useState(0);
-    const [autoQuality, setAutoQuality] = useState(true);
-    const [activeLanguage, setActiveLanguage] = useState('other');
-    const [qualityOpen, setQualityOpen] = useState(false);
-    const [openSeason, setOpenSeason] = useState(null);
     const hideTimerRef = useRef(null);
-    const autoSwitchRef = useRef(0);
-    const resumeTimeRef = useRef(null);
-    const activeEpisodeRef = useRef(null);
-    const drawerRef = useRef(null);
-    const lastSaveRef = useRef(0);
-    const lastPositionRef = useRef(0);
-    const lastTapRef = useRef(0);
-    const episodeChangedRef = useRef(false);
-    const appliedSourceRef = useRef('');
-    const qualitySwitchMetaRef = useRef(null);
-    const qualitySwitchingRef = useRef(false);
-    const stalledRef = useRef(false);
-
-    const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-
-    const enterFullscreen = async (element) => {
-        if (!element) return false;
-        try {
-            if (element.requestFullscreen) {
-                await element.requestFullscreen();
-                return true;
-            }
-            if (element.webkitRequestFullscreen) {
-                element.webkitRequestFullscreen();
-                return true;
-            }
-        } catch {
-            // ignore
-        }
-        return false;
-    };
-
-    const exitFullscreen = async () => {
-        try {
-            if (document.exitFullscreen) {
-                await document.exitFullscreen();
-                return true;
-            }
-            if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-                return true;
-            }
-        } catch {
-            // ignore
-        }
-        return false;
-    };
-
-    const isSubtitleLink = (download) => {
-        if (!download?.url) return false;
-        const url = download.url.toLowerCase();
-        return /\.(vtt|srt|ass|ssa)(\?|#|$)/.test(url);
-    };
-
-    const playableDownloads = useMemo(
-        () => downloads.filter((item) => !isSubtitleLink(item)),
-        [downloads]
-    );
-    const subtitleDownloads = useMemo(
-        () => downloads.filter((item) => isSubtitleLink(item)),
-        [downloads]
-    );
+    const [showControls, setShowControls] = useState(true);
+    const [playing, setPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [buffered, setBuffered] = useState(0);
+    const [showEpisodes, setShowEpisodes] = useState(false);
+    const episodes = useMemo(() => (details?.seasons || []).flatMap((s) => (s.episodes || []).map((ep) => ({ ...ep, season: s.number }))), [details]);
+    const [selected, setSelected] = useState(null);
 
     useEffect(() => {
-        if (!playableDownloads.length) {
-            setCurrent(null);
-            return;
-        }
-        if (!current || !playableDownloads.find((item) => item.url === current.url)) {
-            setCurrent(playableDownloads[0]);
-        }
-    }, [playableDownloads]);
+        const firstEpisode = episodes[0];
+        const initial = firstEpisode?.downloads?.[0] || details?.downloads?.[0] || null;
+        setSelected(initial ? { ...initial, episode: firstEpisode || null } : null);
+    }, [details, episodes]);
 
     useEffect(() => {
-        if (!subtitleDownloads.length) {
-            setActiveSubtitle(null);
-            return;
-        }
-        const preferred = subtitleDownloads.find((item) => /\.vtt(\?|#|$)/.test(item.url.toLowerCase()));
-        setActiveSubtitle(preferred || null);
-    }, [subtitleDownloads]);
+        if (!videoRef.current || !activeItem || !selected) return;
+        const key = selected?.episode?.id ? `${activeItem.id}:${selected.episode.id}` : `${activeItem.id}:movie`;
+        videoRef.current.currentTime = Number(localStorage.getItem(`f2m-progress:${key}`) || '0');
+    }, [activeItem, selected]);
 
     useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.volume = volume;
-        video.muted = muted;
-    }, [volume, muted]);
+        if (!videoRef.current || !activeItem || !selected) return;
+        const interval = setInterval(() => {
+            const video = videoRef.current;
+            const key = selected?.episode?.id ? `${activeItem.id}:${selected.episode.id}` : `${activeItem.id}:movie`;
+            localStorage.setItem(`f2m-progress:${key}`, String(video.currentTime || 0));
+            apiFetch('/api/media/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_id: activeItem.id, episode_id: selected?.episode?.id || null, seconds: video.currentTime, duration_seconds: video.duration, watched_delta: 5 }) }, token).catch(() => {});
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [activeItem, selected, token]);
 
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.playbackRate = playbackRate;
-    }, [playbackRate]);
-
-    useEffect(() => {
-        const key = getResumeKey(mediaId, episodeId);
-        if (!key || !mediaId) return;
-        const saved = Number(localStorage.getItem(key) || 0);
-        if (Number.isFinite(saved) && saved > 0) {
-            resumeTimeRef.current = saved;
-        }
-        const params = new URLSearchParams();
-        params.set('media_id', String(mediaId));
-        if (episodeId) params.set('episode_id', String(episodeId));
-        apiFetch(`/api/progress?${params.toString()}`, {}, token)
-            .then((res) => res.json())
-            .then((data) => {
-                const seconds = Number(data?.seconds || 0);
-                if (Number.isFinite(seconds) && seconds > 0) {
-                    resumeTimeRef.current = seconds;
-                    if (videoRef.current) {
-                        videoRef.current.currentTime = seconds;
-                    }
-                }
-            })
-            .catch(() => {});
-    }, [mediaId, episodeId, token]);
-
-    useEffect(() => {
-        episodeChangedRef.current = true;
-        setTime(0);
-        setDuration(0);
-        setBufferedPercent(0);
-        lastPositionRef.current = 0;
-    }, [episodeId]);
-
-    useEffect(() => {
-        const handleFullscreenChange = async () => {
-            if (!getFullscreenElement() && screen.orientation?.unlock) {
-                try {
-                    await screen.orientation.unlock();
-                } catch {
-                    // ignore
-                }
-            }
-        };
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!current) return;
-        setActiveLanguage(getLanguageKey(current));
-    }, [current]);
-
-    useEffect(() => {
-        onTheaterChange?.(theater);
-    }, [theater, onTheaterChange]);
-
-    const handleKeyDown = (event) => {
-        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
-        if (event.code === 'Space') {
-            event.preventDefault();
-            togglePlay();
-        }
-        if (event.key === 'm') setMuted((value) => !value);
-        if (event.key === 'f') toggleFullscreen();
-        if (event.key === 't') setTheater((value) => !value);
-        if (event.key === 'ArrowRight') {
-            event.preventDefault();
-            seekBy(DESKTOP_SEEK_SECONDS);
-        }
-        if (event.key === 'ArrowLeft') {
-            event.preventDefault();
-            seekBy(-DESKTOP_SEEK_SECONDS);
-        }
-        if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            setVolume((value) => Math.min(1, value + 0.05));
-        }
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            setVolume((value) => Math.max(0, value - 0.05));
-        }
+    const showThenHideControls = () => {
+        setShowControls(true);
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = setTimeout(() => setShowControls(false), 3000);
     };
 
-    const requestImmersiveMode = async () => {
-        const container = containerRef.current;
-        const video = videoRef.current;
-        if (!container || getFullscreenElement()) return;
-        const entered = await enterFullscreen(container);
-
-        if (!entered && video?.webkitEnterFullscreen) {
-            try {
-                video.webkitEnterFullscreen();
-            } catch {
-                // ignore
-            }
-        }
-
-        if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches && screen.orientation?.lock) {
-            try {
-                await screen.orientation.lock('landscape');
-            } catch {
-                // ignore
-            }
-        }
-    };
-
-    const togglePlay = () => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (video.paused) {
-            video.play();
-            setPlaying(true);
-            pulseOverlay();
-            requestImmersiveMode();
-        } else {
-            video.pause();
-            setPlaying(false);
-            pulseOverlay();
-        }
-    };
-
-    const pulseOverlay = () => {
-        setShowOverlay(true);
-        window.setTimeout(() => setShowOverlay(false), 200);
-    };
-
-    const seekTo = (value) => {
-        const video = videoRef.current;
-        if (!video) return;
-        const next = Math.min(duration, Math.max(0, value));
-        video.currentTime = next;
-        setTime(next);
-    };
-
-    const seekBy = (delta) => {
-        seekTo(time + delta);
-    };
-
-    const toggleFullscreen = async () => {
-        const container = containerRef.current;
-        const video = videoRef.current;
-        if (!container) return;
-        if (getFullscreenElement()) {
-            await exitFullscreen();
-            return;
-        }
-
-        const entered = await enterFullscreen(container);
-        if (!entered && video?.webkitEnterFullscreen) {
-            try {
-                video.webkitEnterFullscreen();
-            } catch {
-                // ignore
-            }
-        }
-
-        if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches && screen.orientation?.lock) {
-            try {
-                await screen.orientation.lock('landscape');
-            } catch {
-                // ignore
-            }
-        }
-    };
-
-    const togglePip = async () => {
-        const video = videoRef.current;
-        if (!video || !document.pictureInPictureEnabled) return;
-        if (document.pictureInPictureElement) {
-            await document.exitPictureInPicture();
-        } else {
-            await video.requestPictureInPicture();
-        }
-    };
-
+    useEffect(() => { showThenHideControls(); return () => clearTimeout(hideTimerRef.current); }, []);
     const onTimeUpdate = () => {
         const video = videoRef.current;
         if (!video) return;
-        setTime(video.currentTime);
-        const now = Date.now();
-        if (now - lastSaveRef.current < 2000) return;
-        lastSaveRef.current = now;
-        const key = getResumeKey(mediaId, episodeId);
-        if (!key) return;
-        if (video.currentTime > 5 && Number.isFinite(video.duration) && video.duration > 0) {
-            localStorage.setItem(key, String(video.currentTime));
-            const delta = Math.max(0, video.currentTime - (lastPositionRef.current || 0));
-            const watchedDelta = delta > 0 && delta <= 12 ? delta : 0;
-            lastPositionRef.current = video.currentTime;
-            apiFetch('/api/progress', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    media_id: mediaId,
-                    episode_id: episodeId ?? null,
-                    seconds: video.currentTime,
-                    duration_seconds: video.duration || 0,
-                    watched_delta: watchedDelta,
-                }),
-            }, token).catch(() => {});
-        }
-    };
-
-    const onProgress = () => {
-        const video = videoRef.current;
-        if (!video || !Number.isFinite(video.duration) || video.duration === 0) {
-            setBufferedPercent(0);
-            return;
-        }
-        try {
-            const buffered = video.buffered;
-            if (!buffered || buffered.length === 0) {
-                setBufferedPercent(0);
-                return;
-            }
-            const end = buffered.end(buffered.length - 1);
-            const percent = Math.min(100, (end / video.duration) * 100);
-            setBufferedPercent(percent);
-        } catch {
-            setBufferedPercent(0);
-        }
-    };
-
-    const onLoaded = () => {
-        const video = videoRef.current;
-        if (!video) return;
+        setCurrentTime(video.currentTime || 0);
         setDuration(video.duration || 0);
-        if (resumeTimeRef.current !== null) {
-            const nextTime = Math.min(video.duration || resumeTimeRef.current, resumeTimeRef.current);
-            video.currentTime = Math.max(0, nextTime);
-            resumeTimeRef.current = null;
-        }
-        lastPositionRef.current = video.currentTime || 0;
+        const end = video.buffered?.length ? video.buffered.end(video.buffered.length - 1) : 0;
+        setBuffered(end);
     };
 
-    const onEndedInternal = () => {
-        setPlaying(false);
-        const key = getResumeKey(mediaId, episodeId);
-        if (key) {
-            localStorage.removeItem(key);
-        }
-        if (mediaId) {
-            apiFetch('/api/progress', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    media_id: mediaId,
-                    episode_id: episodeId ?? null,
-                }),
-            }, token).catch(() => {});
-        }
-        onEnded?.();
-    };
-
-    const progress = duration ? (time / duration) * 100 : 0;
-    const sortedDownloads = useMemo(() => sortDownloads(playableDownloads), [playableDownloads]);
-    const currentEntry = episodes?.[currentEpisodeIndex] || null;
-    const pad2 = (value) => String(value || 0).padStart(2, '0');
-    const episodeLabel = currentEntry
-        ? ` (S${pad2(currentEntry.seasonNumber)}E${pad2(currentEntry.episode?.number || currentEntry.index + 1)})`
-        : '';
-
-    const languageOptions = useMemo(() => {
-        const options = new Map();
-        playableDownloads.forEach((item) => {
-            options.set(getLanguageKey(item), true);
-        });
-        return Array.from(options.keys());
-    }, [playableDownloads]);
-
-    const downloadsForLanguage = useMemo(() => {
-        return playableDownloads
-            .filter((item) => getLanguageKey(item) === activeLanguage)
-            .sort((a, b) => qualityRank(b.quality) - qualityRank(a.quality));
-    }, [playableDownloads, activeLanguage]);
-
-    const episodesBySeason = useMemo(() => {
-        const map = new Map();
-        episodes?.forEach((entry, index) => {
-            const key = entry.seasonNumber || 1;
-            if (!map.has(key)) {
-                map.set(key, []);
-            }
-            map.get(key).push({ ...entry, index });
-        });
-        return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
-    }, [episodes]);
-
-    const currentSeasonNumber = episodes?.[currentEpisodeIndex]?.seasonNumber || 1;
-
-    const getEpisodeProgress = (episodeId) => {
-        if (!episodeId || !episodeProgressMap) return { percent: 0, seconds: 0 };
-        return episodeProgressMap[episodeId] || { percent: 0, seconds: 0 };
-    };
-
-
-    useEffect(() => {
-        if (currentSeasonNumber) {
-            setOpenSeason(currentSeasonNumber);
-        }
-    }, [currentSeasonNumber]);
-
-    const preloadSource = (url) => new Promise((resolve) => {
-        if (!url) {
-            resolve(false);
-            return;
-        }
-        const probe = document.createElement('video');
-        probe.preload = 'auto';
-        probe.src = url;
-        let done = false;
-        const finalize = (result) => {
-            if (done) return;
-            done = true;
-            probe.removeAttribute('src');
-            probe.load();
-            resolve(result);
-        };
-        const timeout = window.setTimeout(() => finalize(false), 1800);
-        probe.addEventListener('canplay', () => {
-            window.clearTimeout(timeout);
-            finalize(true);
-        }, { once: true });
-        probe.addEventListener('error', () => {
-            window.clearTimeout(timeout);
-            finalize(false);
-        }, { once: true });
-        probe.load();
-    });
-
-    const setQuality = async (download, options = {}) => {
-        if (!download) return;
-        const { smooth = false } = options;
-        const nextUrl = getPlayUrl(download);
-        const currentUrl = getPlayUrl(current);
-        if (nextUrl && currentUrl && nextUrl === currentUrl) return;
-
-        const video = videoRef.current;
-        if (!video || episodeChangedRef.current) {
-            qualitySwitchMetaRef.current = null;
-            setCurrent(download);
-            return;
-        }
-
-        const snapshot = {
-            time: video.currentTime || 0,
-            wasPlaying: !video.paused,
-            playbackRate,
-        };
-
-        if (smooth && snapshot.wasPlaying && !isHlsSource(nextUrl)) {
-            if (qualitySwitchingRef.current) return;
-            qualitySwitchingRef.current = true;
-            await preloadSource(nextUrl);
-        }
-
-        qualitySwitchMetaRef.current = snapshot;
-        setCurrent(download);
-    };
-
-    useEffect(() => {
-        if (!downloadsForLanguage.length) return;
-        if (current && getLanguageKey(current) === activeLanguage) return;
-        setQuality(downloadsForLanguage[0]);
-    }, [downloadsForLanguage, activeLanguage]);
-
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !current) return;
-        const sourceUrl = getPlayUrl(current);
-        if (!sourceUrl || appliedSourceRef.current === sourceUrl) return;
-
-        const switchMeta = qualitySwitchMetaRef.current;
-        if (episodeChangedRef.current) {
-            resumeTimeRef.current = 0;
-        } else if (switchMeta && Number.isFinite(switchMeta.time)) {
-            resumeTimeRef.current = switchMeta.time;
-        }
-        appliedSourceRef.current = sourceUrl;
-        episodeChangedRef.current = false;
-
-        const playNext = async () => {
-            const shouldPlay = switchMeta?.wasPlaying ?? !video.paused;
-            try {
-                video.src = sourceUrl;
-                video.load();
-                video.playbackRate = switchMeta?.playbackRate || playbackRate;
-                if (shouldPlay) {
-                    await video.play();
-                    setPlaying(true);
-                } else {
-                    setPlaying(false);
-                }
-            } catch (error) {
-                setPlaying(false);
-            } finally {
-                qualitySwitchMetaRef.current = null;
-                qualitySwitchingRef.current = false;
-            }
-        };
-        playNext();
-    }, [current, playbackRate]);
-
-    useEffect(() => {
-        const handleOrientation = () => {
-            if (!window.matchMedia || !window.matchMedia('(max-width: 720px)').matches) return;
-            const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-            if (isLandscape && containerRef.current && !getFullscreenElement()) {
-                enterFullscreen(containerRef.current);
-            }
-        };
-        window.addEventListener('orientationchange', handleOrientation);
-        return () => window.removeEventListener('orientationchange', handleOrientation);
-    }, []);
-
-    useEffect(() => {
-        if (!drawerOpen || !activeEpisodeRef.current) return;
-        const node = activeEpisodeRef.current;
-        requestAnimationFrame(() => {
-            node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        });
-    }, [drawerOpen, currentEpisodeIndex, openSeason]);
-
-    useEffect(() => {
-        if (!autoQuality || !downloadsForLanguage.length || !current) return;
-        const now = Date.now();
-        if (now - autoSwitchRef.current < 9000) return;
-        const video = videoRef.current;
-        if (!video || video.paused || qualitySwitchingRef.current || isHlsSource(getPlayUrl(current))) return;
-        const buffered = video.buffered;
-        if (!buffered || buffered.length === 0) return;
-        const bufferEnd = buffered.end(buffered.length - 1);
-        const bufferAhead = bufferEnd - video.currentTime;
-
-        const currentIndex = downloadsForLanguage.findIndex((item) => item.url === current.url);
-        if (currentIndex < 0) return;
-
-        if (bufferAhead < 2 && currentIndex < downloadsForLanguage.length - 1 && (loading || stalledRef.current)) {
-            autoSwitchRef.current = now;
-            setQuality(downloadsForLanguage[currentIndex + 1], { smooth: true });
-        } else if (bufferAhead > 30 && currentIndex > 0 && !loading && !stalledRef.current) {
-            autoSwitchRef.current = now;
-            setQuality(downloadsForLanguage[currentIndex - 1], { smooth: true });
-        }
-    }, [autoQuality, downloadsForLanguage, current, time, loading]);
-
-    const showControls = (forceHide = false) => {
-        setControlsVisible(true);
-        if (hideTimerRef.current) {
-            window.clearTimeout(hideTimerRef.current);
-        }
-        if (playing || forceHide) {
-            hideTimerRef.current = window.setTimeout(() => setControlsVisible(false), 2200);
-        }
-    };
-
-    const hideControlsSoon = () => {
-        if (!playing) return;
-        if (hideTimerRef.current) {
-            window.clearTimeout(hideTimerRef.current);
-        }
-        hideTimerRef.current = window.setTimeout(() => setControlsVisible(false), 800);
-    };
+    if (!activeItem || !selected) return null;
+    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+    const bufferedPercent = duration > 0 ? (buffered / duration) * 100 : 0;
 
     return (
-        <div className={`player-shell ${theater ? 'theater' : ''}`}>
-            <div
-                className="video-stage"
-                ref={containerRef}
-                onMouseMove={showControls}
-                onMouseLeave={hideControlsSoon}
-                onKeyDown={handleKeyDown}
-                onDoubleClick={() => toggleFullscreen()}
-                onTouchEnd={() => {
-                    const now = Date.now();
-                    if (now - lastTapRef.current < 280) {
-                        lastTapRef.current = 0;
-                        toggleFullscreen();
-                        return;
-                    }
-                    lastTapRef.current = now;
-                }}
-                tabIndex={0}
-            >
-                {current ? (
-                    <video
-                        ref={videoRef}
-                        crossOrigin="anonymous"
-                        onTimeUpdate={onTimeUpdate}
-                        onProgress={onProgress}
-                        onLoadedMetadata={onLoaded}
-                        onLoadStart={() => setLoading(true)}
-                        onWaiting={() => { setLoading(true); stalledRef.current = true; }}
-                        onCanPlay={() => { setLoading(false); stalledRef.current = false; }}
-                        onCanPlayThrough={() => { setLoading(false); stalledRef.current = false; }}
-                        onLoadedData={() => setLoading(false)}
-                        onPlaying={() => { setLoading(false); stalledRef.current = false; }}
-                        onError={() => setLoading(false)}
-                        onEnded={onEndedInternal}
-                        onPlay={() => {
-                            setPlaying(true);
-                            showControls(true);
-                            requestImmersiveMode();
-                        }}
-                        onPause={() => {
-                            setPlaying(false);
-                            setControlsVisible(true);
-                        }}
-                        onClick={() => {
-                            if (!controlsVisible) {
-                                showControls(true);
-                                return;
-                            }
-                            togglePlay();
-                        }}
-                        controls={false}
-                        playsInline
-                        preload="metadata"
-                    >
-                        {activeSubtitle && /\.vtt(\?|#|$)/.test(activeSubtitle.url.toLowerCase()) && (
-                            <track
-                                key={activeSubtitle.url}
-                                src={getPlayUrl(activeSubtitle)}
-                                kind="subtitles"
-                                srcLang="fa"
-                                label="Subtitles"
-                                default
-                            />
-                        )}
-                    </video>
-                ) : (
-                    <div className="player-empty">
-                        No playable links found for this title.
-                    </div>
-                )}
-                <div className={`player-overlay ${showOverlay ? 'show' : ''}`}>
-                    <Icon name={playing ? 'pause' : 'play'} className="overlay-icon" />
-                </div>
-                <div className={`player-center-controls ${controlsVisible ? 'show' : ''}`} onClick={(event) => event.stopPropagation()}>
-                    <button
-                        className="icon-btn seek-btn"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            seekBy(-MOBILE_SEEK_SECONDS);
-                        }}
-                        aria-label="Back 15 seconds"
-                        title="Back 15 seconds"
-                    >
-                        <Icon name="rewind15" />
-                    </button>
-                    <button
-                        className="icon-btn primary large"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            togglePlay();
-                        }}
-                        aria-label={playing ? 'Pause' : 'Play'}
-                        title={playing ? 'Pause' : 'Play'}
-                    >
-                        {loading ? <div className="loader-spinner compact" /> : <Icon name={playing ? 'pause' : 'play'} />}
-                    </button>
-                    <button
-                        className="icon-btn seek-btn"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            seekBy(MOBILE_SEEK_SECONDS);
-                        }}
-                        aria-label="Forward 15 seconds"
-                        title="Forward 15 seconds"
-                    >
-                        <Icon name="forward15" />
-                    </button>
-                </div>
-                <div className={`player-hud ${controlsVisible ? 'show' : ''}`} onClick={(event) => event.stopPropagation()}>
-                    <div className="player-topbar">
-                        <div className="player-title">{title || 'Now Playing'}{episodeLabel}</div>
-                        <div className="player-actions">
-                            {episodes?.length > 0 && (
-                                <button
-                                    className="ghost-btn icon-btn"
-                                    onClick={() => {
-                                        setDrawerOpen((value) => !value);
-                                        setControlsVisible(true);
-                                    }}
-                                    aria-label="Episodes"
-                                    title="Episodes"
-                                >
-                                    <Icon name="episodes" />
-                                </button>
-                            )}
-                            <button
-                                className="ghost-btn icon-btn"
-                                onClick={() => {
-                                    setDrawerOpen((value) => !value);
-                                    setControlsVisible(true);
-                                }}
-                                aria-label="Sources"
-                                title="Sources"
-                            >
-                                <Icon name="sources" />
-                            </button>
-                            <button
-                                className="ghost-btn icon-btn"
-                                onClick={() => setTheater((value) => !value)}
-                                aria-label={theater ? 'Standard mode' : 'Theater mode'}
-                                title={theater ? 'Standard mode' : 'Theater mode'}
-                            >
-                                <Icon name="theater" />
-                            </button>
-                            {showAutoplay && (
-                                <label className="toggle ghost-toggle">
-                                    <input
-                                        type="checkbox"
-                                        checked={autoPlayNext}
-                                        onChange={(event) => onToggleAutoplay(event.target.checked)}
-                                    />
-                                    Auto next
-                                </label>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="player-bottom">
-                        <div
-                            className="progress"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                const rect = event.currentTarget.getBoundingClientRect();
-                                const ratio = (event.clientX - rect.left) / rect.width;
-                                seekTo(ratio * duration);
-                            }}
-                        >
-                            <div className="progress-buffer" style={{ width: `${bufferedPercent}%` }} />
-                            <div className="progress-fill" style={{ width: `${progress}%` }} />
-                        </div>
-                        <div className="control-row">
-                            <div className="control-group primary-controls">
-                                <button
-                                    className="btn icon-btn primary"
-                                    onClick={togglePlay}
-                                    aria-label={playing ? 'Pause' : 'Play'}
-                                    title={playing ? 'Pause' : 'Play'}
-                                >
-                                    <Icon name={playing ? 'pause' : 'play'} />
-                                </button>
-                                <button
-                                    className="btn icon-btn seek-btn"
-                                    onClick={() => seekBy(-DESKTOP_SEEK_SECONDS)}
-                                    aria-label="Back 5 seconds"
-                                    title="Back 5 seconds"
-                                >
-                                    <Icon name="rewind5" />
-                                </button>
-                                <button
-                                    className="btn icon-btn seek-btn"
-                                    onClick={() => seekBy(DESKTOP_SEEK_SECONDS)}
-                                    aria-label="Forward 5 seconds"
-                                    title="Forward 5 seconds"
-                                >
-                                    <Icon name="forward5" />
-                                </button>
-                                <span className="notice">{formatTime(time)} / {formatTime(duration)}</span>
-                            </div>
-
-                            <div className="control-group secondary-controls">
-                                <div className="volume-control">
-                                    <button
-                                        className="btn icon-btn"
-                                        onClick={() => setMuted((value) => !value)}
-                                        aria-label={muted ? 'Unmute' : 'Mute'}
-                                        title={muted ? 'Unmute' : 'Mute'}
-                                    >
-                                        <Icon name={muted ? 'mute' : 'volume'} />
-                                    </button>
-                                    <div className="volume-popover">
-                                        <input
-                                            className="range"
-                                            type="range"
-                                            min="0"
-                                            max="1"
-                                            step="0.01"
-                                            value={volume}
-                                            onChange={(event) => setVolume(Number(event.target.value))}
-                                        />
-                                    </div>
-                                </div>
-                                <div className={`quality-control ${qualityOpen ? 'open' : ''}`}>
-                                    <button
-                                        className="btn icon-btn quality-btn"
-                                        onClick={() => setQualityOpen((value) => !value)}
-                                        aria-label="Quality"
-                                        title="Quality"
-                                    >
-                                        <span className="quality-label">
-                                            {autoQuality ? 'Auto' : (current?.quality || '—')}
-                                            {activeLanguage && activeLanguage !== 'other' && (
-                                                <span className="quality-lang"> · {languageLabel(activeLanguage)}</span>
-                                            )}
-                                        </span>
-                                    </button>
-                                    <div className="quality-popover">
-                                        <div className="subtitle-header">Quality</div>
-                                        <div className="pill-group">
-                                            <button
-                                                className={`pill ${autoQuality ? 'active' : ''}`}
-                                                onClick={() => {
-                                                    setAutoQuality(true);
-                                                    setQualityOpen(false);
-                                                }}
-                                            >
-                                                Auto
-                                            </button>
-                                            {downloadsForLanguage.map((download) => (
-                                                <button
-                                                    key={download.id || download.url}
-                                                    className={`pill ${!autoQuality && current?.url === download.url ? 'active' : ''}`}
-                                                    onClick={() => {
-                                                        setAutoQuality(false);
-                                                        setQuality(download, { smooth: false });
-                                                        setQualityOpen(false);
-                                                    }}
-                                                >
-                                                    {pickQualityLabel(download)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {languageOptions.length > 1 && (
-                                            <div className="pill-group">
-                                                {languageOptions.map((lang) => (
-                                                    <button
-                                                        key={lang}
-                                                        className={`pill ${activeLanguage === lang ? 'active' : ''}`}
-                                                        onClick={() => setActiveLanguage(lang)}
-                                                    >
-                                                        {languageLabel(lang)}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <select className="btn" value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
-                                    {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                                        <option key={rate} value={rate}>{rate}x</option>
-                                    ))}
-                                </select>
-                                <div className={`subtitle-control ${subtitleOpen ? 'open' : ''}`}>
-                                    <button
-                                        className="btn icon-btn"
-                                        onClick={() => setSubtitleOpen((value) => !value)}
-                                        aria-label="Subtitles"
-                                        title="Subtitles"
-                                    >
-                                        <Icon name="sources" />
-                                    </button>
-                                    <div className="subtitle-popover">
-                                        <div className="subtitle-header">Subtitles</div>
-                                        {subtitleDownloads.length === 0 && (
-                                            <div className="notice">No subtitles detected.</div>
-                                        )}
-                                        {subtitleDownloads.map((download) => (
-                                            <button
-                                                key={download.url}
-                                                className={`pill ${activeSubtitle?.url === download.url ? 'active' : ''}`}
-                                                onClick={() => setActiveSubtitle(download)}
-                                            >
-                                                {pickQualityLabel(download)}
-                                            </button>
-                                        ))}
-                                        {subtitleDownloads.length > 0 && !subtitleDownloads.some((download) => /\.vtt(\?|#|$)/.test(download.url.toLowerCase())) && (
-                                            <div className="notice">SRT/ASS subtitles need conversion to VTT for browser playback.</div>
-                                        )}
-                                    </div>
-                                </div>
-                                <button className="btn icon-btn pip-btn" onClick={togglePip} aria-label="Picture in picture" title="Picture in picture">
-                                    <Icon name="pip" />
-                                </button>
-                                <button className="btn icon-btn fullscreen-btn" onClick={toggleFullscreen} aria-label="Fullscreen" title="Fullscreen">
-                                    <Icon name="fullscreen" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {drawerOpen && (
-                    <div
-                        className="player-backdrop"
-                        onClick={() => setDrawerOpen(false)}
-                        role="presentation"
-                    />
-                )}
-                <div className={`player-drawer ${drawerOpen ? 'open' : ''}`} ref={drawerRef}>
-                    <div className="drawer-header">
-                        <div className="drawer-title">Player Menu</div>
-                        <button
-                            className="icon-btn subtle"
-                            onClick={() => setDrawerOpen(false)}
-                            aria-label="Close panel"
-                            title="Close"
-                        >
-                            <Icon name="close" />
-                        </button>
-                    </div>
-                    {episodes?.length > 0 && (
-                        <div className="drawer-section">
-                            <div className="drawer-title">Episodes</div>
-                            {episodesBySeason.map(([seasonNumber, items]) => (
-                                <div key={`season-${seasonNumber}`} className="season-block">
-                                    <button
-                                        className={`season-title ${openSeason === seasonNumber ? 'open' : ''}`}
-                                        onClick={() => setOpenSeason(seasonNumber)}
-                                    >
-                                        Season {seasonNumber}
-                                    </button>
-                                    {openSeason === seasonNumber && (
-                                        <div className="episode-list compact">
-                                            {items.map((entry) => (
-                                                <div
-                                                    key={`${entry.seasonNumber}-${entry.episode.id}`}
-                                                    ref={entry.index === currentEpisodeIndex ? activeEpisodeRef : null}
-                                                    className={`episode-item ${entry.index === currentEpisodeIndex ? 'active' : ''}`}
-                                                    onClick={() => {
-                                                        onSelectEpisode?.(entry.index);
-                                                        setDrawerOpen(false);
-                                                    }}
-                                                >
-                                                    <div style={{ fontWeight: 600 }}>{entry.episode.title || `Episode ${entry.episode.number || entry.index + 1}`}</div>
-                                                    <div className="notice">Episode {entry.episode.number || entry.index + 1}</div>
-                                                    <div className="episode-progress-track">
-                                                        <div
-                                                            className="episode-progress-fill"
-                                                            style={{ width: `${getEpisodeProgress(entry.episode.id).percent}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="notice">{Math.round(getEpisodeProgress(entry.episode.id).percent)}%</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <div className="drawer-section">
-                        <div className="drawer-title">Sources</div>
-                        {languageOptions.length > 1 && (
-                            <div className="pill-group">
-                                {languageOptions.map((lang) => (
-                                    <button
-                                        key={lang}
-                                        className={`pill ${activeLanguage === lang ? 'active' : ''}`}
-                                        onClick={() => setActiveLanguage(lang)}
-                                    >
-                                        {languageLabel(lang)}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        <div className="pill-group">
-                            <button
-                                className={`pill ${autoQuality ? 'active' : ''}`}
-                                onClick={() => setAutoQuality(true)}
-                            >
-                                Auto
-                            </button>
-                            {downloadsForLanguage.map((download) => (
-                                <button
-                                    key={download.id || download.url}
-                                    className={`pill ${!autoQuality && current?.url === download.url ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setAutoQuality(false);
-                                        setQuality(download, { smooth: false });
-                                    }}
-                                >
-                                    {pickQualityLabel(download)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {subtitleDownloads.length > 0 && (
-                        <div className="drawer-section">
-                            <div className="drawer-title">Subtitles</div>
-                            <div className="pill-group">
-                                {subtitleDownloads.map((download) => (
-                                    <button
-                                        key={download.id || download.url}
-                                        className={`pill ${activeSubtitle?.url === download.url ? 'active' : ''}`}
-                                        onClick={() => setActiveSubtitle(download)}
-                                    >
-                                        {pickQualityLabel(download)}
-                                    </button>
-                                ))}
-                            </div>
-                            {!subtitleDownloads.some((download) => /\.vtt(\?|#|$)/.test(download.url.toLowerCase())) && (
-                                <div className="notice">SRT/ASS subtitles need conversion to VTT for browser playback.</div>
-                            )}
-                        </div>
-                    )}
-
-                    {current?.format === 'mkv' && (
-                        <div className="notice">Browser support for MKV is limited. If playback fails, switch to MP4.</div>
-                    )}
+        <aside className="relative w-full overflow-hidden rounded-3xl border border-[#2A2A2A] bg-[#111111]">
+            <div className="relative aspect-video w-full bg-black" onMouseMove={showThenHideControls} onTouchStart={showThenHideControls}>
+                <video ref={videoRef} className="h-full w-full" src={selected.stream_url || selected.url} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={onTimeUpdate} onLoadedMetadata={onTimeUpdate} autoPlay />
+                <div className={`absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-black/20 to-black/50 p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    <div className="flex items-center justify-between"><div><h3 className="text-lg font-semibold">{activeItem.title}</h3>{selected.episode && <p className="text-xs text-[#A0A0A0]">Season {selected.episode.season} · Episode {selected.episode.number}</p>}</div><button className="rounded-full bg-black/40 p-2" onClick={onClose}><Icon name="close" className="size-5" /></button></div>
+                    <div className="space-y-4"><div className="relative h-1.5 overflow-hidden rounded-full bg-white/20"><div className="absolute inset-y-0 left-0 bg-white/30" style={{ width: `${bufferedPercent}%` }} /><div className="absolute inset-y-0 left-0 bg-[#FF2D55]" style={{ width: `${progress}%` }} /><input type="range" min="0" max={duration || 0} value={currentTime} onChange={(e) => { const t = Number(e.target.value); if (videoRef.current) videoRef.current.currentTime = t; setCurrentTime(t); }} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" /></div><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><button className="player-btn" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }}><Icon name="skipBack" className="size-5" /></button><button className="player-btn h-12 w-12" onClick={() => (playing ? videoRef.current.pause() : videoRef.current.play())}>{playing ? <Icon name="pause" className="size-6" /> : <Icon name="play" className="ml-0.5 size-6" />}</button><button className="player-btn" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }}><Icon name="skipForward" className="size-5" /></button><span className="text-xs text-[#A0A0A0]">{formatTime(currentTime)} / {formatTime(duration)}</span></div><div className="flex items-center gap-2"><button className="player-btn" onClick={() => setShowEpisodes((p) => !p)}>Episodes</button><button className="player-btn">Quality</button><button className="player-btn">Subtitles</button><button className="player-btn">Speed</button><button className="player-btn">PIP</button><button className="player-btn">Theater</button><label className="player-btn gap-2 px-3 text-xs text-[#A0A0A0]"><span>Auto next</span><input type="checkbox" checked={autoNext} onChange={(e) => setAutoNext(e.target.checked)} /></label></div></div></div>
                 </div>
             </div>
-        </div>
+            {showEpisodes && episodes.length > 0 && <div className="absolute right-4 top-24 z-40 w-80 rounded-2xl border border-[#2A2A2A] bg-[#111111]/95 p-3 shadow-2xl"><div className="mb-2 flex items-center justify-between"><h4 className="text-sm font-semibold">Episode List</h4><button onClick={() => setShowEpisodes(false)}><Icon name="close" className="size-4 text-[#A0A0A0]" /></button></div><div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">{episodes.map((ep) => { const epDownload = ep.downloads?.[0]; const key = `${activeItem.id}:${ep.id}`; const pct = Number(localStorage.getItem(`f2m-progress:${key}`) || '0'); const selectedEpisode = selected?.episode?.id === ep.id; return <button key={ep.id} onClick={() => setSelected({ ...epDownload, episode: ep })} className={`w-full rounded-xl border p-3 text-left ${selectedEpisode ? 'border-[#FF2D55] bg-[#1F1F1F]' : 'border-[#2A2A2A] bg-[#171717]'}`}><div className="text-xs text-[#A0A0A0]">Season {ep.season}</div><div className="text-sm font-semibold">Episode {ep.number}</div><div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-[#FF2D55]" style={{ width: `${Math.min(100, pct)}%` }} /></div></button>; })}</div></div>}
+        </aside>
     );
 };
 
-const RequireAuth = ({ children }) => {
+const LibraryPage = () => {
     const { token } = useAuth();
-    if (!token) {
-        return <Navigate to="/login" replace />;
-    }
-    return children;
-};
-
-const RequireAdmin = ({ children }) => {
-    const { user } = useAuth();
-    if (!user?.is_admin) {
-        return <Navigate to="/" replace />;
-    }
-    return children;
-};
-
-const LoginPage = () => {
-    const { login } = useAuth();
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const location = useLocation();
+    const { id } = useParams();
+    const selectedId = id ? Number(id) : null;
+    const [media, setMedia] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [details, setDetails] = useState(null);
+    const [search, setSearch] = useState('');
+    const [autoNext, setAutoNext] = useState(true);
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        setError('');
-        try {
-            await login({ email, password });
-            navigate('/');
-        } catch (err) {
-            setError('Login failed.');
-        }
-    };
+    useEffect(() => { setLoading(true); apiFetch('/api/media', {}, token).then((res) => res.json()).then((data) => setMedia(data.data || [])).catch(() => setMedia([])).finally(() => setLoading(false)); }, [token]);
+    useEffect(() => { if (!selectedId) return setDetails(null); apiFetch(`/api/media/${selectedId}`, {}, token).then((res) => res.ok ? res.json() : null).then((data) => setDetails(data || null)).catch(() => setDetails(null)); }, [selectedId, token]);
+
+    const filtered = useMemo(() => { const term = search.trim().toLowerCase(); return term ? media.filter((item) => item.title?.toLowerCase().includes(term)) : media; }, [media, search]);
+    const suggestions = filtered.slice(0, 5);
+    const featured = filtered[0];
+    const continueWatching = filtered.slice(0, 12);
+    const trending = [...filtered].sort((a, b) => (b.imdb_rating || 0) - (a.imdb_rating || 0)).slice(0, 12);
+    const newReleases = [...filtered].sort((a, b) => (b.year || 0) - (a.year || 0)).slice(0, 12);
+    const library = filtered.slice(0, 24);
+    const progressMap = useMemo(() => Object.fromEntries(media.map((item) => [item.id, Number(localStorage.getItem(`f2m-progress:${item.id}:movie`)) > 0 ? 40 : 8])), [media]);
 
     return (
-        <div className="auth-shell">
-            <div className="auth-card">
-                <div className="auth-title">Welcome back</div>
-                <div className="notice">Login to continue watching.</div>
-                <form className="auth-form" onSubmit={handleSubmit}>
-                    <input
-                        className="auth-input"
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        required
-                    />
-                    <input
-                        className="auth-input"
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        required
-                    />
-                    {error && <div className="auth-error">{error}</div>}
-                    <button className="btn primary" type="submit">Login</button>
-                </form>
-                <div className="notice">No account? <Link to="/register">Register</Link></div>
-            </div>
+        <div className="min-h-screen bg-[#0F0F0F] pb-24 pt-20 text-[#F1F1F1]" dir="ltr">
+            <TopNav search={search} setSearch={setSearch} suggestions={search ? suggestions : []} active={location.pathname.startsWith('/admin') ? '/admin' : location.pathname.startsWith('/account') ? '/account' : '/'} onPickSuggestion={(pickedId) => navigate(`/media/${pickedId}`)} />
+            <main className="mx-auto grid max-w-[1600px] gap-6 px-4 md:px-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+                <section className="space-y-7 transition-all duration-300">
+                    <section className="relative overflow-hidden rounded-3xl border border-[#2A2A2A] bg-[#161616] p-6 md:p-8"><div className="absolute inset-0 bg-gradient-to-r from-[#FF2D55]/20 via-transparent to-transparent" /><div className="relative max-w-3xl space-y-4"><p className="inline-flex items-center gap-2 rounded-full border border-[#2A2A2A] bg-[#111111] px-3 py-1 text-xs font-semibold text-[#A0A0A0]">HyperDark Cinema</p><h1 className="text-3xl font-bold md:text-4xl">{featured?.title || 'Your premium streaming universe'}</h1><p className="max-w-2xl text-sm text-[#A0A0A0]">{featured?.synopsis || 'Continue watching your favorites, discover what is trending, and build your personal cinema library.'}</p>{featured && <button onClick={() => navigate(`/media/${featured.id}`)} className="rounded-full bg-[#FF2D55] px-5 py-2 text-sm font-semibold transition hover:brightness-110">Play Featured Title</button>}</div></section>
+                    <RowSection title="Continue Watching" items={continueWatching} loading={loading} onSelect={(mediaId) => navigate(`/media/${mediaId}`)} progressMap={progressMap} />
+                    <RowSection title="Trending" items={trending} loading={loading} onSelect={(mediaId) => navigate(`/media/${mediaId}`)} progressMap={progressMap} />
+                    <RowSection title="New Releases" items={newReleases} loading={loading} onSelect={(mediaId) => navigate(`/media/${mediaId}`)} progressMap={progressMap} />
+                    <section className="space-y-3"><h2 className="text-lg font-semibold">Your Library</h2>{loading ? <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">{Array.from({ length: 12 }).map((_, i) => <div key={i} className="shimmer aspect-video rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A]" />)}</div> : <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">{library.map((item) => <PosterCard key={`grid-${item.id}`} item={item} progress={progressMap[item.id] || 0} onClick={() => navigate(`/media/${item.id}`)} />)}</div>}</section>
+                </section>
+                {selectedId && details?.media && <section className="xl:sticky xl:top-24 xl:self-start transition-all duration-300"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-[#A0A0A0]">Now Playing</h2><button onClick={() => navigate('/')} className="rounded-full border border-[#2A2A2A] p-2 text-[#A0A0A0] hover:text-[#F1F1F1]"><Icon name="close" className="size-4" /></button></div><Player activeItem={details.media} details={details} autoNext={autoNext} setAutoNext={setAutoNext} onClose={() => navigate('/')} /></section>}
+            </main>
+            <nav className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center justify-around rounded-2xl border border-[#2A2A2A] bg-[#111111]/95 p-3 text-xs md:hidden"><Link className="mobile-nav-link" to="/">Home</Link><button className="mobile-nav-link" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Search</button><button className="mobile-nav-link" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Library</button><Link className="mobile-nav-link" to="/account">Profile</Link></nav>
         </div>
     );
 };
 
-const RegisterPage = () => {
-    const { register } = useAuth();
+const AuthPage = ({ mode }) => {
+    const { login, register } = useAuth();
     const navigate = useNavigate();
+    const isLogin = mode === 'login';
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
+    const submit = async (e) => {
+        e.preventDefault();
         setError('');
         try {
-            await register({ name, email, password });
+            if (isLogin) await login({ email, password }); else await register({ name, email, password });
             navigate('/');
-        } catch (err) {
-            setError('Register failed.');
-        }
-    };
-
-    return (
-        <div className="auth-shell">
-            <div className="auth-card">
-                <div className="auth-title">Create account</div>
-                <div className="notice">Start your library journey.</div>
-                <form className="auth-form" onSubmit={handleSubmit}>
-                    <input
-                        className="auth-input"
-                        type="text"
-                        placeholder="Name"
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        required
-                    />
-                    <input
-                        className="auth-input"
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        required
-                    />
-                    <input
-                        className="auth-input"
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        required
-                    />
-                    {error && <div className="auth-error">{error}</div>}
-                    <button className="btn primary" type="submit">Register</button>
-                </form>
-                <div className="notice">Already have an account? <Link to="/login">Login</Link></div>
-            </div>
-        </div>
-    );
-};
-
-const LibraryPage = () => {
-    const { token, user, logout } = useAuth();
-    const navigate = useNavigate();
-    const { id } = useParams();
-    const selectedId = id ? Number(id) : null;
-    const [media, setMedia] = useState([]);
-    const [details, setDetails] = useState(null);
-    const [search, setSearch] = useState('');
-    const [autoPlayNext, setAutoPlayNext] = useState(true);
-    const [isTheater, setIsTheater] = useState(false);
-    const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
-    const [watchlist, setWatchlist] = useState(new Set());
-    const [favorites, setFavorites] = useState(new Set());
-    const [episodeProgressMap, setEpisodeProgressMap] = useState({});
-
-    useEffect(() => {
-        apiFetch('/api/media', {}, token)
-            .then((res) => res.json())
-            .then((data) => setMedia(data.data || []))
-            .catch(() => setMedia([]));
-    }, [token]);
-
-    useEffect(() => {
-        apiFetch('/api/watchlist', {}, token)
-            .then((res) => res.json())
-            .then((data) => setWatchlist(new Set((data.data || []).map((item) => item.id))))
-            .catch(() => setWatchlist(new Set()));
-        apiFetch('/api/favorites', {}, token)
-            .then((res) => res.json())
-            .then((data) => setFavorites(new Set((data.data || []).map((item) => item.id))))
-            .catch(() => setFavorites(new Set()));
-    }, [token]);
-
-    const toggleWatchlist = async (mediaId) => {
-        const isActive = watchlist.has(mediaId);
-        const method = isActive ? 'DELETE' : 'POST';
-        await apiFetch('/api/watchlist', {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ media_id: mediaId }),
-        }, token);
-        setWatchlist((prev) => {
-            const next = new Set(prev);
-            if (isActive) next.delete(mediaId);
-            else next.add(mediaId);
-            return next;
-        });
-    };
-
-    const toggleFavorite = async (mediaId) => {
-        const isActive = favorites.has(mediaId);
-        const method = isActive ? 'DELETE' : 'POST';
-        await apiFetch('/api/favorites', {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ media_id: mediaId }),
-        }, token);
-        setFavorites((prev) => {
-            const next = new Set(prev);
-            if (isActive) next.delete(mediaId);
-            else next.add(mediaId);
-            return next;
-        });
-    };
-
-    useEffect(() => {
-        if (!selectedId) {
-            setDetails(null);
-            return;
-        }
-        apiFetch(`/api/media/${selectedId}`, {}, token)
-            .then((res) => res.json())
-            .then((data) => setDetails(data))
-            .catch(() => setDetails(null));
-    }, [selectedId, token]);
-
-    useEffect(() => {
-        setCurrentEpisodeIndex(0);
-        setEpisodeProgressMap({});
-    }, [details?.media?.id]);
-
-    const filtered = media.filter((item) =>
-        `${item.title || ''}`.toLowerCase().includes(search.toLowerCase())
-    );
-
-    const flatEpisodes = useMemo(() => {
-        if (!details?.seasons) return [];
-        const list = [];
-        details.seasons.forEach((season) => {
-            season.episodes?.forEach((episode) => {
-                list.push({
-                    seasonNumber: season.number,
-                    seasonId: season.id,
-                    seasonTitle: season.title,
-                    episode,
-                });
-            });
-        });
-        return list;
-    }, [details]);
-
-    useEffect(() => {
-        if (!details?.media?.id) return;
-        apiFetch(`/api/progress/latest?media_id=${details.media.id}`, {}, token)
-            .then((res) => res.json())
-            .then((data) => {
-                const episodeId = data?.episode_id;
-                if (!episodeId) return;
-                const index = flatEpisodes.findIndex((entry) => entry.episode.id === episodeId);
-                if (index >= 0) {
-                    setCurrentEpisodeIndex(index);
-                }
-            })
-            .catch(() => {});
-    }, [details?.media?.id, flatEpisodes, token]);
-
-    useEffect(() => {
-        if (!flatEpisodes.length) {
-            setCurrentEpisodeIndex(0);
-        }
-    }, [flatEpisodes.length]);
-
-    useEffect(() => {
-        if (!details?.media?.id || details.media?.type !== 'series') {
-            setEpisodeProgressMap({});
-            return;
-        }
-        apiFetch(`/api/progress/list?media_id=${details.media.id}`, {}, token)
-            .then((res) => res.json())
-            .then((data) => {
-                const nextMap = {};
-                (data?.episodes || []).forEach((entry) => {
-                    const id = Number(entry?.episode_id || 0);
-                    if (!id) return;
-                    const seconds = Number(entry?.seconds || 0);
-                    const fromPercent = Number(entry?.percent || 0) * 100;
-                    const percent = Math.min(100, Math.max(0, Number.isFinite(fromPercent) ? fromPercent : 0));
-                    nextMap[id] = {
-                        percent,
-                        seconds: Number.isFinite(seconds) ? Math.max(0, seconds) : 0,
-                    };
-                });
-                setEpisodeProgressMap(nextMap);
-            })
-            .catch(() => setEpisodeProgressMap({}));
-    }, [details?.media?.id, details?.media?.type, token]);
-
-
-    const currentEpisode = flatEpisodes[currentEpisodeIndex]?.episode || null;
-    const handleEnded = () => {
-        if (!autoPlayNext) return;
-        if (!flatEpisodes.length) return;
-        const nextIndex = currentEpisodeIndex + 1;
-        if (nextIndex < flatEpisodes.length) {
-            setCurrentEpisodeIndex(nextIndex);
-        }
-    };
-
-    const currentDownloads = useMemo(() => {
-        if (!details) return [];
-        if (details.media?.type === 'series') {
-            return currentEpisode?.downloads || [];
-        }
-        return details.downloads || [];
-    }, [details, currentEpisode]);
-
-    return (
-        <div className="app-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-mark" />
-                    <div>
-                        <div>F2M HyperPlayer</div>
-                        <div className="notice">Crawl → Curate → Watch</div>
-                    </div>
-                </div>
-                <div className="search-bar">
-                    <span>🔍</span>
-                    <input
-                        className="search-input"
-                        placeholder="Search your library..."
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                    />
-                </div>
-                <div className="user-chip">
-                    <span>{user?.name || 'User'}</span>
-                    <button className="btn" onClick={() => navigate('/account')}>Account</button>
-                    {user?.is_admin && (
-                        <button className="btn" onClick={() => navigate('/admin')}>Admin</button>
-                    )}
-                    <button className="btn" onClick={async () => { await logout(); navigate('/login', { replace: true }); }}>Logout</button>
-                </div>
-            </div>
-
-            <div className={`layout ${isTheater ? 'theater' : ''}`}>
-                <div className={`hero-panel ${isTheater ? 'theater' : ''}`}>
-                    {!details && (
-                        <div>
-                            <div style={{ fontSize: 24, fontWeight: 700 }}>Your Library</div>
-                            <div className="notice">Pick a movie or series to start watching.</div>
-                            <div className="media-grid">
-                                {filtered.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="media-card"
-                                        onClick={() => navigate(`/media/${item.id}`)}
-                                    >
-                                        <div className="media-card-actions">
-                                            <button
-                                                className={`icon-btn action-btn ${watchlist.has(item.id) ? 'active' : ''}`}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    toggleWatchlist(item.id);
-                                                }}
-                                                title="Watchlist"
-                                            >
-                                                W
-                                            </button>
-                                            <button
-                                                className={`icon-btn action-btn ${favorites.has(item.id) ? 'active' : ''}`}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    toggleFavorite(item.id);
-                                                }}
-                                                title="Favourite"
-                                            >
-                                                F
-                                            </button>
-                                        </div>
-                                        <div className="media-card-media">
-                                            {item.poster_url ? (
-                                                <img src={item.poster_url} alt={item.title || 'poster'} />
-                                            ) : (
-                                                <div className="poster-fallback">F2M</div>
-                                            )}
-                                        </div>
-                                        <div className="media-card-body">
-                                            <div className="media-card-title">{item.title || 'Untitled'}</div>
-                                            <div className="media-card-meta">{item.type?.toUpperCase()} · {item.year || '—'} · {item.imdb_rating || '—'}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {details && (
-                        <Player
-                            title={details.media?.title}
-                            mediaId={details.media?.id}
-                            episodeId={currentEpisode?.id}
-                            token={token}
-                            downloads={currentDownloads}
-                            onEnded={handleEnded}
-                            autoPlayNext={autoPlayNext}
-                            onToggleAutoplay={setAutoPlayNext}
-                            showAutoplay={details.media?.type === 'series'}
-                            episodes={flatEpisodes}
-                            currentEpisodeIndex={currentEpisodeIndex}
-                            onSelectEpisode={setCurrentEpisodeIndex}
-                            onTheaterChange={setIsTheater}
-                            episodeProgressMap={episodeProgressMap}
-                        />
-                    )}
-                </div>
-
-                <div className="sidebar">
-                    <div className="panel">
-                        <div className="section-title">Now Playing</div>
-                        {details ? (
-                            <div>
-                                <div style={{ fontWeight: 600 }}>{details.media?.title || 'Untitled'}</div>
-                                <div className="meta-row">
-                                    <span>{details.media?.type?.toUpperCase()}</span>
-                                    <span>{details.media?.year || '—'}</span>
-                                    <span>IMDb {details.media?.imdb_rating || '—'}</span>
-                                </div>
-                                <div className="notice" style={{ marginTop: 8 }}>{details.media?.synopsis}</div>
-                            </div>
-                        ) : (
-                            <div className="notice">Select a title to see details and playback.</div>
-                        )}
-                    </div>
-
-                    {details && (
-                        <div className="panel">
-                            <div className="section-title">Actions</div>
-                            <button className="btn" onClick={() => navigate('/')}>Back to Library</button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const AdminPage = () => {
-    const { token, user } = useAuth();
-    const [items, setItems] = useState([]);
-    const [url, setUrl] = useState('');
-    const [poster, setPoster] = useState('');
-    const [type, setType] = useState('movie');
-    const [title, setTitle] = useState('');
-    const [status, setStatus] = useState('');
-    const [busyId, setBusyId] = useState(null);
-    const [posterBusyId, setPosterBusyId] = useState(null);
-
-    const loadItems = () => {
-        apiFetch('/api/admin/media', {}, token)
-            .then((res) => res.json())
-            .then((data) => setItems(data.data || []))
-            .catch(() => setItems([]));
-    };
-
-    useEffect(() => {
-        loadItems();
-    }, [token]);
-
-    const handleCreate = async (event) => {
-        event.preventDefault();
-        setStatus('');
-        try {
-            const res = await apiFetch('/api/admin/media', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    url,
-                    poster_url: poster || null,
-                    type: type || null,
-                    title: title || null,
-                }),
-            }, token);
-            if (!res.ok) {
-                setStatus('Create failed.');
-                return;
-            }
-            setUrl('');
-            setPoster('');
-            setTitle('');
-            setStatus('Added and crawled.');
-            loadItems();
         } catch {
-            setStatus('Create failed.');
+            setError(isLogin ? 'Login failed. Please verify your credentials.' : 'Registration failed.');
         }
     };
 
-    const handleRefresh = async (id) => {
-        setBusyId(id);
-        try {
-            await apiFetch(`/api/admin/media/${id}/refresh`, { method: 'POST' }, token);
-            loadItems();
-        } finally {
-            setBusyId(null);
-        }
-    };
-
-    const handlePosterUpload = async (id, file) => {
-        if (!file) return;
-        setPosterBusyId(id);
-        try {
-            const form = new FormData();
-            form.append('poster', file);
-            await apiFetchForm(`/api/admin/media/${id}/poster`, form, token);
-            loadItems();
-        } finally {
-            setPosterBusyId(null);
-        }
-    };
-
-    return (
-        <div className="app-shell admin-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-mark" />
-                    <div>
-                        <div>Admin Panel</div>
-                        <div className="notice">Add and refresh media</div>
-                    </div>
-                </div>
-                <div className="user-chip">
-                    <span>{user?.name || 'Admin'}</span>
-                </div>
-            </div>
-
-            <div className="admin-grid">
-                <div className="panel">
-                    <div className="section-title">Add Media</div>
-                    <form className="admin-form" onSubmit={handleCreate}>
-                        <input
-                            className="auth-input"
-                            placeholder="Media URL"
-                            value={url}
-                            onChange={(event) => setUrl(event.target.value)}
-                            required
-                        />
-                        <input
-                            className="auth-input"
-                            placeholder="Poster URL (optional)"
-                            value={poster}
-                            onChange={(event) => setPoster(event.target.value)}
-                        />
-                        <input
-                            className="auth-input"
-                            placeholder="Title override (optional)"
-                            value={title}
-                            onChange={(event) => setTitle(event.target.value)}
-                        />
-                        <select className="btn" value={type} onChange={(event) => setType(event.target.value)}>
-                            <option value="movie">Movie</option>
-                            <option value="series">Series</option>
-                        </select>
-                        <button className="btn primary" type="submit">Crawl & Add</button>
-                        {status && <div className="notice">{status}</div>}
-                    </form>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Library</div>
-                    <div className="admin-list">
-                        {items.map((item) => (
-                            <div key={item.id} className="admin-item">
-                                <div className="admin-thumb">
-                                    {item.poster_url ? (
-                                        <img src={item.poster_url} alt={item.title || 'poster'} />
-                                    ) : (
-                                        <div className="poster-fallback">F2M</div>
-                                    )}
-                                </div>
-                                <div className="admin-meta">
-                                    <div className="admin-title">{item.title || 'Untitled'}</div>
-                                    <div className="notice">{item.type?.toUpperCase()} · {item.year || '—'}</div>
-                                    <div className="notice">Updated {item.updated_at}</div>
-                                </div>
-                                <div className="admin-actions">
-                                    <label className="btn upload-btn">
-                                        {posterBusyId === item.id ? 'Uploading…' : 'Upload Poster'}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(event) => handlePosterUpload(item.id, event.target.files?.[0])}
-                                        />
-                                    </label>
-                                    <button
-                                        className="btn"
-                                        onClick={() => handleRefresh(item.id)}
-                                        disabled={busyId === item.id}
-                                    >
-                                        {busyId === item.id ? 'Refreshing…' : 'Update'}
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    return <div className="grid min-h-screen place-content-center bg-[#0F0F0F] p-4" dir="ltr"><form onSubmit={submit} className="w-full max-w-md space-y-4 rounded-3xl border border-[#2A2A2A] bg-[#151515] p-8"><h1 className="text-2xl font-bold">{isLogin ? 'Welcome back to F2M HyperPlayer' : 'Create your F2M HyperPlayer account'}</h1>{!isLogin && <input value={name} onChange={(e) => setName(e.target.value)} className="auth-input" placeholder="Name" required />}<input value={email} onChange={(e) => setEmail(e.target.value)} className="auth-input" placeholder="Email" type="email" required /><input value={password} onChange={(e) => setPassword(e.target.value)} className="auth-input" placeholder="Password" type="password" required />{error && <div className="text-sm text-[#FF6B8D]">{error}</div>}<button className="w-full rounded-xl bg-[#FF2D55] py-3 text-sm font-semibold">{isLogin ? 'Login' : 'Register'}</button><p className="text-sm text-[#A0A0A0]">{isLogin ? 'Need an account?' : 'Already have an account?'} <Link className="text-[#F1F1F1] underline" to={isLogin ? '/register' : '/login'}>{isLogin ? 'Register' : 'Login'}</Link></p></form></div>;
 };
 
 const AccountPage = () => {
-    const { token, user } = useAuth();
-    const [stats, setStats] = useState(null);
-    const [watchlist, setWatchlist] = useState([]);
-    const [favorites, setFavorites] = useState([]);
-
-    useEffect(() => {
-        apiFetch('/api/stats/overview', {}, token)
-            .then((res) => res.json())
-            .then((data) => setStats(data))
-            .catch(() => setStats(null));
-        apiFetch('/api/watchlist', {}, token)
-            .then((res) => res.json())
-            .then((data) => setWatchlist(data.data || []))
-            .catch(() => setWatchlist([]));
-        apiFetch('/api/favorites', {}, token)
-            .then((res) => res.json())
-            .then((data) => setFavorites(data.data || []))
-            .catch(() => setFavorites([]));
-    }, [token]);
-
-    return (
-        <div className="app-shell account-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-mark" />
-                    <div>
-                        <div>Account</div>
-                        <div className="notice">{user?.name || 'User'} statistics</div>
-                    </div>
-                </div>
-                <div className="user-chip">
-                    <Link className="btn" to="/">Back to Library</Link>
-                </div>
-            </div>
-
-            <div className="account-grid">
-                <div className="panel">
-                    <div className="section-title">Watch Stats</div>
-                    <div className="stat-grid">
-                        <div className="stat-card">
-                            <div className="notice">Total watch time</div>
-                            <div className="stat-value">{formatSeconds(stats?.total_watch_seconds || 0)}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">Movies watched</div>
-                            <div className="stat-value">{stats?.movie_count_watched || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">Series watched</div>
-                            <div className="stat-value">{stats?.series_count_watched || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">70%+ completions</div>
-                            <div className="stat-value">{stats?.completed_70_total || 0}</div>
-                        </div>
-                    </div>
-                    {stats?.last_watched && (
-                        <div className="panel highlight">
-                            <div className="notice">Last watched</div>
-                            <div className="stat-value">{stats.last_watched.title}</div>
-                            <div className="notice">{formatSeconds(stats.last_watched.seconds || 0)} watched</div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Watchlist</div>
-                    <div className="mini-grid">
-                        {watchlist.map((item) => (
-                            <div key={item.id} className="mini-card">
-                                {item.poster_url ? (
-                                    <img src={item.poster_url} alt={item.title || 'poster'} />
-                                ) : (
-                                    <div className="poster-fallback">F2M</div>
-                                )}
-                                <div className="mini-title">{item.title || 'Untitled'}</div>
-                            </div>
-                        ))}
-                        {watchlist.length === 0 && <div className="notice">No items yet.</div>}
-                    </div>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Favourites</div>
-                    <div className="mini-grid">
-                        {favorites.map((item) => (
-                            <div key={item.id} className="mini-card">
-                                {item.poster_url ? (
-                                    <img src={item.poster_url} alt={item.title || 'poster'} />
-                                ) : (
-                                    <div className="poster-fallback">F2M</div>
-                                )}
-                                <div className="mini-title">{item.title || 'Untitled'}</div>
-                            </div>
-                        ))}
-                        {favorites.length === 0 && <div className="notice">No items yet.</div>}
-                    </div>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Top 70% Replays</div>
-                    <div className="admin-list">
-                        {(stats?.top_completed || []).map((item) => (
-                            <div key={item.id} className="admin-item">
-                                <div className="admin-meta">
-                                    <div className="admin-title">{item.title}</div>
-                                    <div className="notice">{item.type?.toUpperCase()} · {item.completions}x</div>
-                                </div>
-                            </div>
-                        ))}
-                        {(!stats?.top_completed || stats.top_completed.length === 0) && (
-                            <div className="notice">No completed titles yet.</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    const { user } = useAuth();
+    return <div className="min-h-screen bg-[#0F0F0F] p-8 pt-24" dir="ltr"><TopNav search="" setSearch={() => {}} suggestions={[]} active="/account" onPickSuggestion={() => {}} /><div className="mx-auto max-w-4xl rounded-3xl border border-[#2A2A2A] bg-[#151515] p-8"><h1 className="text-3xl font-bold">Account</h1><p className="mt-2 text-[#A0A0A0]">Signed in as {user?.name || 'User'}.</p></div></div>;
 };
 
-const MainApp = () => (
-    <Routes>
-        <Route path="/" element={<LibraryPage />} />
-        <Route path="/media/:id" element={<LibraryPage />} />
-        <Route path="/account" element={<AccountPage />} />
-        <Route path="/admin" element={<RequireAdmin><AdminPage /></RequireAdmin>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-);
+const AdminPage = () => <div className="min-h-screen bg-[#0F0F0F] p-8 pt-24" dir="ltr"><TopNav search="" setSearch={() => {}} suggestions={[]} active="/admin" onPickSuggestion={() => {}} /><div className="mx-auto max-w-4xl rounded-3xl border border-[#2A2A2A] bg-[#151515] p-8"><h1 className="text-3xl font-bold">Admin</h1><p className="mt-2 text-[#A0A0A0]">Crawl, curate, and manage your media pipeline from here.</p></div></div>;
 
 const RootApp = () => (
     <BrowserRouter>
         <AuthProvider>
             <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route
-                    path="/*"
-                    element={(
-                        <RequireAuth>
-                            <MainApp />
-                        </RequireAuth>
-                    )}
-                />
+                <Route path="/login" element={<AuthPage mode="login" />} />
+                <Route path="/register" element={<AuthPage mode="register" />} />
+                <Route path="/*" element={<RequireAuth><Routes><Route path="/" element={<LibraryPage />} /><Route path="/media/:id" element={<LibraryPage />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></RequireAuth>} />
             </Routes>
         </AuthProvider>
     </BrowserRouter>
 );
 
-const root = createRoot(document.getElementById('app'));
-root.render(<RootApp />);
-
-
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
-}
+createRoot(document.getElementById('app')).render(<RootApp />);
