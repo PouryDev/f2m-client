@@ -1842,6 +1842,8 @@ body {
 }
 
 .hero-panel {
+    overflow: hidden;
+    min-width: 0;
     border-radius: 30px;
     border: 1px solid rgba(170, 191, 255, 0.2);
     background:
@@ -1849,6 +1851,16 @@ body {
         radial-gradient(380px 180px at 85% 0, rgba(255, 78, 205, 0.12), transparent 65%),
         linear-gradient(165deg, rgba(12, 18, 39, 0.94), rgba(8, 13, 28, 0.9));
     box-shadow: 0 24px 68px rgba(4, 6, 18, 0.58), 0 0 0 1px rgba(111,123,255,0.2) inset;
+}
+
+.library-stack {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.library-header-block {
+    overflow: hidden;
+    min-width: 0;
 }
 
 .library-header-block {
@@ -1869,7 +1881,8 @@ body {
     margin-top: 14px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    max-width: 100%;
+    overflow: hidden;    gap: 10px;
 }
 
 .library-kpi-item {
@@ -2016,7 +2029,7 @@ body {
     }
 
     .library-kpi-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .search-bar {
@@ -2061,4 +2074,10 @@ body {
     .scroll-fade::after {
         width: 20px;
     }
+}
+
+.cinematic-hero-scroll,
+.library-row-section {
+    min-width: 0;
+    max-width: 100%;
 }
