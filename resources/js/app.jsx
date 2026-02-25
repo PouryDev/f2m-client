@@ -131,6 +131,7 @@ const pickQualityLabel = (download) => {
 };
 
 const getPlayUrl = (download) => download?.stream_url || download?.url || '';
+const isHlsSource = (url) => /\.m3u8(\?|#|$)/i.test(url || '');
 
 const getResumeKey = (mediaId, episodeId) => {
     if (!mediaId) return null;
@@ -765,7 +766,7 @@ const Player = ({
             playbackRate,
         };
 
-        if (smooth && snapshot.wasPlaying) {
+        if (smooth && snapshot.wasPlaying && !isHlsSource(nextUrl)) {
             if (qualitySwitchingRef.current) return;
             qualitySwitchingRef.current = true;
             await preloadSource(nextUrl);
@@ -795,12 +796,14 @@ const Player = ({
         }
         appliedSourceRef.current = sourceUrl;
         episodeChangedRef.current = false;
-        setPlaying(false);
+
         const playNext = async () => {
+            const shouldPlay = switchMeta?.wasPlaying ?? !video.paused;
             try {
+                video.src = sourceUrl;
                 video.load();
                 video.playbackRate = switchMeta?.playbackRate || playbackRate;
-                if (switchMeta?.wasPlaying ?? true) {
+                if (shouldPlay) {
                     await video.play();
                     setPlaying(true);
                 } else {
@@ -841,7 +844,7 @@ const Player = ({
         const now = Date.now();
         if (now - autoSwitchRef.current < 9000) return;
         const video = videoRef.current;
-        if (!video || video.paused || qualitySwitchingRef.current) return;
+        if (!video || video.paused || qualitySwitchingRef.current || isHlsSource(getPlayUrl(current))) return;
         const buffered = video.buffered;
         if (!buffered || buffered.length === 0) return;
         const bufferEnd = buffered.end(buffered.length - 1);
@@ -900,7 +903,6 @@ const Player = ({
                 {current ? (
                     <video
                         ref={videoRef}
-                        src={getPlayUrl(current)}
                         crossOrigin="anonymous"
                         onTimeUpdate={onTimeUpdate}
                         onProgress={onProgress}
