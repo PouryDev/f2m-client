@@ -1448,583 +1448,354 @@ const RegisterPage = () => {
     );
 };
 
+const SkeletonCard = () => (
+    <div className="cine-skeleton-card" aria-hidden="true">
+        <div className="cine-skeleton-poster" />
+        <div className="cine-skeleton-line" />
+        <div className="cine-skeleton-line short" />
+    </div>
+);
+
+const MediaCarousel = ({ title, items, onWatch, watchProgress = {}, loading = false }) => {
+    const trackRef = useRef(null);
+
+    const slide = (direction) => {
+        const el = trackRef.current;
+        if (!el) return;
+        el.scrollBy({ left: direction * Math.max(el.clientWidth * 0.85, 280), behavior: 'smooth' });
+    };
+
+    return (
+        <section className="cine-row">
+            <div className="cine-row-header">
+                <h2>{title}</h2>
+                <div className="cine-row-arrows">
+                    <button className="icon-btn" onClick={() => slide(-1)} aria-label={`Scroll ${title} left`}>‹</button>
+                    <button className="icon-btn" onClick={() => slide(1)} aria-label={`Scroll ${title} right`}>›</button>
+                </div>
+            </div>
+            <div className="cine-carousel" ref={trackRef}>
+                {loading
+                    ? Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={`${title}-${index}`} />)
+                    : items.map((item) => {
+                        const progress = Math.min(100, Math.max(0, watchProgress[item.id] || 0));
+                        return (
+                            <article className="cine-card" key={`${title}-${item.id}`} onClick={() => onWatch(item.id)}>
+                                <div className="cine-card-media">
+                                    {item.poster_url ? <img src={item.poster_url} alt={item.title || 'poster'} /> : <div className="poster-fallback">CinePK</div>}
+                                    <div className="cine-card-overlay">
+                                        <div className="cine-card-title">{item.title || 'Untitled'}</div>
+                                    </div>
+                                </div>
+                                {title === 'Continue Watching' && (
+                                    <div className="cine-progress-track">
+                                        <div className="cine-progress-fill" style={{ width: `${progress}%` }} />
+                                    </div>
+                                )}
+                            </article>
+                        );
+                    })}
+            </div>
+        </section>
+    );
+};
+
+const MobileBottomNav = ({ user }) => (
+    <nav className="cine-mobile-nav">
+        <Link to="/">Home</Link>
+        <Link to="/">Search</Link>
+        <Link to="/">Library</Link>
+        <Link to="/account">{user?.name ? 'Account' : 'Account'}</Link>
+    </nav>
+);
+
 const LibraryPage = () => {
     const { token, user, logout } = useAuth();
     const navigate = useNavigate();
-    const { id } = useParams();
-    const selectedId = id ? Number(id) : null;
-    const [media, setMedia] = useState([]);
-    const [details, setDetails] = useState(null);
+    const [dashboard, setDashboard] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [autoPlayNext, setAutoPlayNext] = useState(true);
-    const [isTheater, setIsTheater] = useState(false);
+
+    useEffect(() => {
+        setLoading(true);
+        apiFetch('/api/home/dashboard', {}, token)
+            .then((res) => res.json())
+            .then((data) => setDashboard(data))
+            .catch(() => setDashboard({ featured: null, rows: {}, progress: {} }))
+            .finally(() => setLoading(false));
+    }, [token]);
+
+    const allRows = dashboard?.rows || {};
+    const filterItems = (items = []) => items.filter((item) => (item.title || '').toLowerCase().includes(search.toLowerCase()));
+
+    return (
+        <div className="cine-shell">
+            <header className="cine-topbar">
+                <div className="brand">
+                    <img src="/logo.png" alt="CinePK" className="h-8 w-auto" />
+                    <div>
+                        <div>CinePK</div>
+                        <div className="notice">HyperDark Cinema 2025</div>
+                    </div>
+                </div>
+                <div className="cine-toolbar">
+                    <input className="cine-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your library" />
+                    {user?.is_admin && <Link className="btn" to="/admin">Admin</Link>}
+                    <Link className="btn" to="/account">Account</Link>
+                    <button className="btn" onClick={() => { logout(); navigate('/login'); }}>Logout</button>
+                </div>
+            </header>
+
+            <section className="cine-hero">
+                {loading ? <div className="cine-hero-skeleton" /> : (
+                    <>
+                        <div className="cine-hero-content">
+                            <div className="notice">Featured tonight</div>
+                            <h1>{dashboard?.featured?.title || 'No featured media yet'}</h1>
+                            <p>{dashboard?.featured?.synopsis || 'Add media from admin panel to populate your premium home dashboard.'}</p>
+                            {dashboard?.featured?.id && <button className="btn primary" onClick={() => navigate(`/watch/${dashboard.featured.id}`)}>Start Streaming</button>}
+                        </div>
+                        {dashboard?.featured?.poster_url && <img src={dashboard.featured.poster_url} alt={dashboard.featured.title || 'featured'} className="cine-hero-poster" />}
+                    </>
+                )}
+            </section>
+
+            <MediaCarousel title="Continue Watching" items={filterItems(allRows.continue_watching)} onWatch={(id) => navigate(`/watch/${id}`)} watchProgress={dashboard?.progress || {}} loading={loading} />
+            <MediaCarousel title="Trending" items={filterItems(allRows.trending)} onWatch={(id) => navigate(`/watch/${id}`)} loading={loading} />
+            <MediaCarousel title="New Releases" items={filterItems(allRows.new_releases)} onWatch={(id) => navigate(`/watch/${id}`)} loading={loading} />
+            <MediaCarousel title="Your Library" items={filterItems(allRows.your_library)} onWatch={(id) => navigate(`/watch/${id}`)} loading={loading} />
+            <MobileBottomNav user={user} />
+        </div>
+    );
+};
+
+const WatchPage = () => {
+    const { token } = useAuth();
+    const navigate = useNavigate();
+    const { id } = useParams();
+    const mediaId = Number(id);
+    const [details, setDetails] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
-    const [watchlist, setWatchlist] = useState(new Set());
-    const [favorites, setFavorites] = useState(new Set());
     const [episodeProgressMap, setEpisodeProgressMap] = useState({});
 
     useEffect(() => {
-        apiFetch('/api/media', {}, token)
-            .then((res) => res.json())
-            .then((data) => setMedia(data.data || []))
-            .catch(() => setMedia([]));
-    }, [token]);
-
-    useEffect(() => {
-        apiFetch('/api/watchlist', {}, token)
-            .then((res) => res.json())
-            .then((data) => setWatchlist(new Set((data.data || []).map((item) => item.id))))
-            .catch(() => setWatchlist(new Set()));
-        apiFetch('/api/favorites', {}, token)
-            .then((res) => res.json())
-            .then((data) => setFavorites(new Set((data.data || []).map((item) => item.id))))
-            .catch(() => setFavorites(new Set()));
-    }, [token]);
-
-    const toggleWatchlist = async (mediaId) => {
-        const isActive = watchlist.has(mediaId);
-        const method = isActive ? 'DELETE' : 'POST';
-        await apiFetch('/api/watchlist', {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ media_id: mediaId }),
-        }, token);
-        setWatchlist((prev) => {
-            const next = new Set(prev);
-            if (isActive) next.delete(mediaId);
-            else next.add(mediaId);
-            return next;
-        });
-    };
-
-    const toggleFavorite = async (mediaId) => {
-        const isActive = favorites.has(mediaId);
-        const method = isActive ? 'DELETE' : 'POST';
-        await apiFetch('/api/favorites', {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ media_id: mediaId }),
-        }, token);
-        setFavorites((prev) => {
-            const next = new Set(prev);
-            if (isActive) next.delete(mediaId);
-            else next.add(mediaId);
-            return next;
-        });
-    };
-
-    useEffect(() => {
-        if (!selectedId) {
-            setDetails(null);
-            return;
-        }
-        apiFetch(`/api/media/${selectedId}`, {}, token)
+        if (!mediaId) return;
+        setLoading(true);
+        apiFetch(`/api/media/${mediaId}`, {}, token)
             .then((res) => res.json())
             .then((data) => setDetails(data))
-            .catch(() => setDetails(null));
-    }, [selectedId, token]);
-
-    useEffect(() => {
-        setCurrentEpisodeIndex(0);
-        setEpisodeProgressMap({});
-    }, [details?.media?.id]);
-
-    const filtered = media.filter((item) =>
-        `${item.title || ''}`.toLowerCase().includes(search.toLowerCase())
-    );
+            .catch(() => setDetails(null))
+            .finally(() => setLoading(false));
+    }, [mediaId, token]);
 
     const flatEpisodes = useMemo(() => {
         if (!details?.seasons) return [];
-        const list = [];
-        details.seasons.forEach((season) => {
-            season.episodes?.forEach((episode) => {
-                list.push({
-                    seasonNumber: season.number,
-                    seasonId: season.id,
-                    seasonTitle: season.title,
-                    episode,
-                });
-            });
-        });
-        return list;
+        return details.seasons.flatMap((season) => (season.episodes || []).map((episode, index) => ({ seasonNumber: season.number, episode, index })));
     }, [details]);
 
     useEffect(() => {
-        if (!details?.media?.id) return;
-        apiFetch(`/api/progress/latest?media_id=${details.media.id}`, {}, token)
-            .then((res) => res.json())
-            .then((data) => {
-                const episodeId = data?.episode_id;
-                if (!episodeId) return;
-                const index = flatEpisodes.findIndex((entry) => entry.episode.id === episodeId);
-                if (index >= 0) {
-                    setCurrentEpisodeIndex(index);
-                }
-            })
-            .catch(() => {});
-    }, [details?.media?.id, flatEpisodes, token]);
-
-    useEffect(() => {
-        if (!flatEpisodes.length) {
-            setCurrentEpisodeIndex(0);
-        }
-    }, [flatEpisodes.length]);
-
-    useEffect(() => {
-        if (!details?.media?.id || details.media?.type !== 'series') {
-            setEpisodeProgressMap({});
-            return;
-        }
+        if (!details?.media?.id || details.media.type !== 'series') return;
         apiFetch(`/api/progress/list?media_id=${details.media.id}`, {}, token)
             .then((res) => res.json())
             .then((data) => {
                 const nextMap = {};
                 (data?.episodes || []).forEach((entry) => {
-                    const id = Number(entry?.episode_id || 0);
-                    if (!id) return;
-                    const seconds = Number(entry?.seconds || 0);
-                    const fromPercent = Number(entry?.percent || 0) * 100;
-                    const percent = Math.min(100, Math.max(0, Number.isFinite(fromPercent) ? fromPercent : 0));
-                    nextMap[id] = {
-                        percent,
-                        seconds: Number.isFinite(seconds) ? Math.max(0, seconds) : 0,
-                    };
+                    nextMap[entry.episode_id] = { percent: Math.round((entry.percent || 0) * 100) };
                 });
                 setEpisodeProgressMap(nextMap);
             })
             .catch(() => setEpisodeProgressMap({}));
     }, [details?.media?.id, details?.media?.type, token]);
 
-
-    const currentEpisode = flatEpisodes[currentEpisodeIndex]?.episode || null;
-    const handleEnded = () => {
-        if (!autoPlayNext) return;
-        if (!flatEpisodes.length) return;
-        const nextIndex = currentEpisodeIndex + 1;
-        if (nextIndex < flatEpisodes.length) {
-            setCurrentEpisodeIndex(nextIndex);
-        }
-    };
-
-    const currentDownloads = useMemo(() => {
-        if (!details) return [];
-        if (details.media?.type === 'series') {
-            return currentEpisode?.downloads || [];
-        }
-        return details.downloads || [];
-    }, [details, currentEpisode]);
+    const currentEpisode = flatEpisodes[currentEpisodeIndex]?.episode;
+    const downloads = details?.media?.type === 'series' ? (currentEpisode?.downloads || []) : (details?.downloads || []);
 
     return (
-        <div className="app-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-mark" />
-                    <div>
-                        <div>F2M HyperPlayer</div>
-                        <div className="notice">Crawl → Curate → Watch</div>
-                    </div>
-                </div>
-                <div className="search-bar">
-                    <span>🔍</span>
-                    <input
-                        className="search-input"
-                        placeholder="Search your library..."
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
+        <div className="cine-watch-shell">
+            <header className="cine-watch-topbar">
+                <button className="btn" onClick={() => navigate('/')}>← Back</button>
+                <div className="cine-watch-title">{details?.media?.title || 'Loading stream...'}</div>
+                <img src="/logo.png" alt="CinePK" className="h-8 w-auto" />
+            </header>
+            {loading && <div className="panel">Loading stream...</div>}
+            {!loading && details?.media && (
+                <div className="cine-watch-layout">
+                    <Player
+                        title={details.media.title}
+                        mediaId={details.media.id}
+                        episodeId={currentEpisode?.id || null}
+                        token={token}
+                        downloads={downloads}
+                        onEnded={() => {
+                            if (currentEpisodeIndex < flatEpisodes.length - 1) {
+                                setCurrentEpisodeIndex((value) => value + 1);
+                            }
+                        }}
+                        autoPlayNext
+                        onToggleAutoplay={() => {}}
+                        showAutoplay={details.media.type === 'series'}
+                        episodes={flatEpisodes.map((entry, index) => ({ ...entry, index }))}
+                        currentEpisodeIndex={currentEpisodeIndex}
+                        onSelectEpisode={setCurrentEpisodeIndex}
+                        onTheaterChange={() => {}}
+                        episodeProgressMap={episodeProgressMap}
                     />
-                </div>
-                <div className="user-chip">
-                    <span>{user?.name || 'User'}</span>
-                    <button className="btn" onClick={() => navigate('/account')}>Account</button>
-                    {user?.is_admin && (
-                        <button className="btn" onClick={() => navigate('/admin')}>Admin</button>
-                    )}
-                    <button className="btn" onClick={async () => { await logout(); navigate('/login', { replace: true }); }}>Logout</button>
-                </div>
-            </div>
-
-            <div className={`layout ${isTheater ? 'theater' : ''}`}>
-                <div className={`hero-panel ${isTheater ? 'theater' : ''}`}>
-                    {!details && (
-                        <div>
-                            <div style={{ fontSize: 24, fontWeight: 700 }}>Your Library</div>
-                            <div className="notice">Pick a movie or series to start watching.</div>
-                            <div className="media-grid">
-                                {filtered.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="media-card"
-                                        onClick={() => navigate(`/media/${item.id}`)}
-                                    >
-                                        <div className="media-card-actions">
-                                            <button
-                                                className={`icon-btn action-btn ${watchlist.has(item.id) ? 'active' : ''}`}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    toggleWatchlist(item.id);
-                                                }}
-                                                title="Watchlist"
-                                            >
-                                                W
-                                            </button>
-                                            <button
-                                                className={`icon-btn action-btn ${favorites.has(item.id) ? 'active' : ''}`}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    toggleFavorite(item.id);
-                                                }}
-                                                title="Favourite"
-                                            >
-                                                F
-                                            </button>
-                                        </div>
-                                        <div className="media-card-media">
-                                            {item.poster_url ? (
-                                                <img src={item.poster_url} alt={item.title || 'poster'} />
-                                            ) : (
-                                                <div className="poster-fallback">F2M</div>
-                                            )}
-                                        </div>
-                                        <div className="media-card-body">
-                                            <div className="media-card-title">{item.title || 'Untitled'}</div>
-                                            <div className="media-card-meta">{item.type?.toUpperCase()} · {item.year || '—'} · {item.imdb_rating || '—'}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {details && (
-                        <Player
-                            title={details.media?.title}
-                            mediaId={details.media?.id}
-                            episodeId={currentEpisode?.id}
-                            token={token}
-                            downloads={currentDownloads}
-                            onEnded={handleEnded}
-                            autoPlayNext={autoPlayNext}
-                            onToggleAutoplay={setAutoPlayNext}
-                            showAutoplay={details.media?.type === 'series'}
-                            episodes={flatEpisodes}
-                            currentEpisodeIndex={currentEpisodeIndex}
-                            onSelectEpisode={setCurrentEpisodeIndex}
-                            onTheaterChange={setIsTheater}
-                            episodeProgressMap={episodeProgressMap}
-                        />
+                    {details.media.type === 'series' && (
+                        <aside className="cine-episode-sidebar custom-scrollbar">
+                            <h3>Episodes</h3>
+                            {flatEpisodes.map((entry, index) => (
+                                <button
+                                    key={entry.episode.id}
+                                    className={`cine-episode-item ${index === currentEpisodeIndex ? 'active' : ''}`}
+                                    onClick={() => setCurrentEpisodeIndex(index)}
+                                >
+                                    <span>S{entry.seasonNumber} · E{entry.episode.number || index + 1}</span>
+                                    <strong>{entry.episode.title || `Episode ${index + 1}`}</strong>
+                                    <div className="cine-progress-track"><div className="cine-progress-fill" style={{ width: `${episodeProgressMap[entry.episode.id]?.percent || 0}%` }} /></div>
+                                </button>
+                            ))}
+                        </aside>
                     )}
                 </div>
-
-                <div className="sidebar">
-                    <div className="panel">
-                        <div className="section-title">Now Playing</div>
-                        {details ? (
-                            <div>
-                                <div style={{ fontWeight: 600 }}>{details.media?.title || 'Untitled'}</div>
-                                <div className="meta-row">
-                                    <span>{details.media?.type?.toUpperCase()}</span>
-                                    <span>{details.media?.year || '—'}</span>
-                                    <span>IMDb {details.media?.imdb_rating || '—'}</span>
-                                </div>
-                                <div className="notice" style={{ marginTop: 8 }}>{details.media?.synopsis}</div>
-                            </div>
-                        ) : (
-                            <div className="notice">Select a title to see details and playback.</div>
-                        )}
-                    </div>
-
-                    {details && (
-                        <div className="panel">
-                            <div className="section-title">Actions</div>
-                            <button className="btn" onClick={() => navigate('/')}>Back to Library</button>
-                        </div>
-                    )}
-                </div>
-            </div>
+            )}
+            <MobileBottomNav user={{}} />
         </div>
     );
 };
 
 const AdminPage = () => {
-    const { token, user } = useAuth();
-    const [items, setItems] = useState([]);
+    const { token } = useAuth();
     const [url, setUrl] = useState('');
-    const [poster, setPoster] = useState('');
     const [type, setType] = useState('movie');
     const [title, setTitle] = useState('');
-    const [status, setStatus] = useState('');
-    const [busyId, setBusyId] = useState(null);
-    const [posterBusyId, setPosterBusyId] = useState(null);
+    const [posterUrl, setPosterUrl] = useState('');
+    const [media, setMedia] = useState([]);
+    const [search, setSearch] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const [page, setPage] = useState(1);
+    const pageSize = 12;
 
-    const loadItems = () => {
+    const fetchMedia = () => {
+        setLoading(true);
         apiFetch('/api/admin/media', {}, token)
             .then((res) => res.json())
-            .then((data) => setItems(data.data || []))
-            .catch(() => setItems([]));
+            .then((data) => setMedia(data.data || []))
+            .catch(() => setMedia([]))
+            .finally(() => setLoading(false));
     };
 
-    useEffect(() => {
-        loadItems();
-    }, [token]);
+    useEffect(() => { fetchMedia(); }, [token]);
 
-    const handleCreate = async (event) => {
+    const addMedia = async (event) => {
         event.preventDefault();
-        setStatus('');
+        setBusy(true);
         try {
-            const res = await apiFetch('/api/admin/media', {
+            await apiFetch('/api/admin/media', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    url,
-                    poster_url: poster || null,
-                    type: type || null,
-                    title: title || null,
-                }),
+                body: JSON.stringify({ url, type, title, poster_url: posterUrl }),
             }, token);
-            if (!res.ok) {
-                setStatus('Create failed.');
-                return;
-            }
-            setUrl('');
-            setPoster('');
-            setTitle('');
-            setStatus('Added and crawled.');
-            loadItems();
-        } catch {
-            setStatus('Create failed.');
+            setUrl(''); setTitle(''); setPosterUrl('');
+            fetchMedia();
+        } finally {
+            setBusy(false);
         }
     };
 
-    const handleRefresh = async (id) => {
-        setBusyId(id);
-        try {
-            await apiFetch(`/api/admin/media/${id}/refresh`, { method: 'POST' }, token);
-            loadItems();
-        } finally {
-            setBusyId(null);
-        }
-    };
-
-    const handlePosterUpload = async (id, file) => {
-        if (!file) return;
-        setPosterBusyId(id);
-        try {
-            const form = new FormData();
-            form.append('poster', file);
-            await apiFetchForm(`/api/admin/media/${id}/poster`, form, token);
-            loadItems();
-        } finally {
-            setPosterBusyId(null);
-        }
-    };
+    const filtered = media.filter((item) => (item.title || '').toLowerCase().includes(search.toLowerCase()));
+    const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+    const maxPage = Math.max(1, Math.ceil(filtered.length / pageSize));
 
     return (
-        <div className="app-shell admin-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-mark" />
-                    <div>
-                        <div>Admin Panel</div>
-                        <div className="notice">Add and refresh media</div>
-                    </div>
-                </div>
-                <div className="user-chip">
-                    <span>{user?.name || 'Admin'}</span>
-                </div>
-            </div>
-
-            <div className="admin-grid">
-                <div className="panel">
-                    <div className="section-title">Add Media</div>
-                    <form className="admin-form" onSubmit={handleCreate}>
-                        <input
-                            className="auth-input"
-                            placeholder="Media URL"
-                            value={url}
-                            onChange={(event) => setUrl(event.target.value)}
-                            required
-                        />
-                        <input
-                            className="auth-input"
-                            placeholder="Poster URL (optional)"
-                            value={poster}
-                            onChange={(event) => setPoster(event.target.value)}
-                        />
-                        <input
-                            className="auth-input"
-                            placeholder="Title override (optional)"
-                            value={title}
-                            onChange={(event) => setTitle(event.target.value)}
-                        />
-                        <select className="btn" value={type} onChange={(event) => setType(event.target.value)}>
-                            <option value="movie">Movie</option>
-                            <option value="series">Series</option>
-                        </select>
-                        <button className="btn primary" type="submit">Crawl & Add</button>
-                        {status && <div className="notice">{status}</div>}
-                    </form>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Library</div>
+        <div className="cine-shell">
+            <header className="cine-topbar">
+                <div className="brand"><img src="/logo.png" alt="CinePK" className="h-8 w-auto" /><div><div>Admin Panel</div><div className="notice">Manage CinePK library</div></div></div>
+                <Link className="btn" to="/">Back to Home</Link>
+            </header>
+            <div className="admin-layout">
+                <form className="panel" onSubmit={addMedia}>
+                    <h2>Add Media</h2>
+                    <input className="auth-input" placeholder="Media URL" value={url} onChange={(e) => setUrl(e.target.value)} required />
+                    <input className="auth-input" placeholder="Poster URL" value={posterUrl} onChange={(e) => setPosterUrl(e.target.value)} />
+                    <input className="auth-input" placeholder="Title override" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <select className="auth-input" value={type} onChange={(e) => setType(e.target.value)}>
+                        <option value="movie">Movie</option><option value="series">Series</option>
+                    </select>
+                    <button className="btn primary" disabled={busy}>{busy ? 'Crawling...' : 'Crawl & Add'}</button>
+                </form>
+                <section className="panel">
+                    <div className="cine-row-header"><h2>Library list</h2><input className="cine-search" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
                     <div className="admin-list">
-                        {items.map((item) => (
-                            <div key={item.id} className="admin-item">
-                                <div className="admin-thumb">
-                                    {item.poster_url ? (
-                                        <img src={item.poster_url} alt={item.title || 'poster'} />
-                                    ) : (
-                                        <div className="poster-fallback">F2M</div>
-                                    )}
-                                </div>
+                        {loading ? Array.from({ length: 5 }).map((_, i) => <div className="admin-item" key={i}><SkeletonCard /></div>) : paged.map((item) => (
+                            <div className="admin-item" key={item.id}>
                                 <div className="admin-meta">
-                                    <div className="admin-title">{item.title || 'Untitled'}</div>
-                                    <div className="notice">{item.type?.toUpperCase()} · {item.year || '—'}</div>
-                                    <div className="notice">Updated {item.updated_at}</div>
+                                    {item.poster_url ? <img src={item.poster_url} alt={item.title || 'poster'} className="admin-thumb" /> : <div className="admin-thumb poster-fallback">CinePK</div>}
+                                    <div>
+                                        <div className="admin-title">{item.title || 'Untitled'}</div>
+                                        <div className="notice">{item.type?.toUpperCase()} · Updated {new Date(item.updated_at).toLocaleDateString()}</div>
+                                    </div>
                                 </div>
                                 <div className="admin-actions">
-                                    <label className="btn upload-btn">
-                                        {posterBusyId === item.id ? 'Uploading…' : 'Upload Poster'}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(event) => handlePosterUpload(item.id, event.target.files?.[0])}
-                                        />
+                                    <label className="btn">
+                                        Upload Poster
+                                        <input type="file" hidden onChange={async (event) => {
+                                            const file = event.target.files?.[0];
+                                            if (!file) return;
+                                            const formData = new FormData();
+                                            formData.append('poster', file);
+                                            await apiFetchForm(`/api/admin/media/${item.id}/poster`, formData, token);
+                                            fetchMedia();
+                                        }} />
                                     </label>
-                                    <button
-                                        className="btn"
-                                        onClick={() => handleRefresh(item.id)}
-                                        disabled={busyId === item.id}
-                                    >
-                                        {busyId === item.id ? 'Refreshing…' : 'Update'}
-                                    </button>
+                                    <button className="btn" onClick={async () => { await apiFetch(`/api/admin/media/${item.id}/refresh`, { method: 'POST' }, token); fetchMedia(); }}>Update</button>
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                    <div className="pagination">
+                        <button className="btn" disabled={page <= 1} onClick={() => setPage((v) => Math.max(1, v - 1))}>Prev</button>
+                        <span className="notice">Page {page} / {maxPage}</span>
+                        <button className="btn" disabled={page >= maxPage} onClick={() => setPage((v) => Math.min(maxPage, v + 1))}>Next</button>
+                    </div>
+                </section>
             </div>
+            <MobileBottomNav user={{}} />
         </div>
     );
 };
 
 const AccountPage = () => {
     const { token, user } = useAuth();
-    const [stats, setStats] = useState(null);
-    const [watchlist, setWatchlist] = useState([]);
-    const [favorites, setFavorites] = useState([]);
+    const [dashboard, setDashboard] = useState(null);
 
     useEffect(() => {
-        apiFetch('/api/stats/overview', {}, token)
+        apiFetch('/api/account/dashboard', {}, token)
             .then((res) => res.json())
-            .then((data) => setStats(data))
-            .catch(() => setStats(null));
-        apiFetch('/api/watchlist', {}, token)
-            .then((res) => res.json())
-            .then((data) => setWatchlist(data.data || []))
-            .catch(() => setWatchlist([]));
-        apiFetch('/api/favorites', {}, token)
-            .then((res) => res.json())
-            .then((data) => setFavorites(data.data || []))
-            .catch(() => setFavorites([]));
+            .then((data) => setDashboard(data))
+            .catch(() => setDashboard({ stats: {}, watchlist: [], favorites: [], top_replays: [] }));
     }, [token]);
 
+    const stats = dashboard?.stats || {};
+
     return (
-        <div className="app-shell account-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-mark" />
-                    <div>
-                        <div>Account</div>
-                        <div className="notice">{user?.name || 'User'} statistics</div>
-                    </div>
-                </div>
-                <div className="user-chip">
-                    <Link className="btn" to="/">Back to Library</Link>
-                </div>
+        <div className="cine-shell">
+            <header className="cine-topbar">
+                <div className="brand"><img src="/logo.png" alt="CinePK" className="h-8 w-auto" /><div><div>{user?.name || 'Account'}</div><div className="notice">Premium watch analytics</div></div></div>
+                <Link className="btn" to="/">Back to Home</Link>
+            </header>
+            <div className="account-grid-premium">
+                <div className="glass-card"><div className="notice">Total watch time</div><div className="stat-value">{formatSeconds(stats.total_watch_seconds || 0)}</div></div>
+                <div className="glass-card"><div className="notice">Movies watched</div><div className="stat-value">{stats.movie_count_watched || 0}</div></div>
+                <div className="glass-card"><div className="notice">Series watched</div><div className="stat-value">{stats.series_count_watched || 0}</div></div>
+                <div className="glass-card"><div className="notice">70% Completions</div><div className="stat-value">{stats.completed_70_total || 0}</div></div>
             </div>
-
-            <div className="account-grid">
-                <div className="panel">
-                    <div className="section-title">Watch Stats</div>
-                    <div className="stat-grid">
-                        <div className="stat-card">
-                            <div className="notice">Total watch time</div>
-                            <div className="stat-value">{formatSeconds(stats?.total_watch_seconds || 0)}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">Movies watched</div>
-                            <div className="stat-value">{stats?.movie_count_watched || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">Series watched</div>
-                            <div className="stat-value">{stats?.series_count_watched || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="notice">70%+ completions</div>
-                            <div className="stat-value">{stats?.completed_70_total || 0}</div>
-                        </div>
-                    </div>
-                    {stats?.last_watched && (
-                        <div className="panel highlight">
-                            <div className="notice">Last watched</div>
-                            <div className="stat-value">{stats.last_watched.title}</div>
-                            <div className="notice">{formatSeconds(stats.last_watched.seconds || 0)} watched</div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Watchlist</div>
-                    <div className="mini-grid">
-                        {watchlist.map((item) => (
-                            <div key={item.id} className="mini-card">
-                                {item.poster_url ? (
-                                    <img src={item.poster_url} alt={item.title || 'poster'} />
-                                ) : (
-                                    <div className="poster-fallback">F2M</div>
-                                )}
-                                <div className="mini-title">{item.title || 'Untitled'}</div>
-                            </div>
-                        ))}
-                        {watchlist.length === 0 && <div className="notice">No items yet.</div>}
-                    </div>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Favourites</div>
-                    <div className="mini-grid">
-                        {favorites.map((item) => (
-                            <div key={item.id} className="mini-card">
-                                {item.poster_url ? (
-                                    <img src={item.poster_url} alt={item.title || 'poster'} />
-                                ) : (
-                                    <div className="poster-fallback">F2M</div>
-                                )}
-                                <div className="mini-title">{item.title || 'Untitled'}</div>
-                            </div>
-                        ))}
-                        {favorites.length === 0 && <div className="notice">No items yet.</div>}
-                    </div>
-                </div>
-
-                <div className="panel">
-                    <div className="section-title">Top 70% Replays</div>
-                    <div className="admin-list">
-                        {(stats?.top_completed || []).map((item) => (
-                            <div key={item.id} className="admin-item">
-                                <div className="admin-meta">
-                                    <div className="admin-title">{item.title}</div>
-                                    <div className="notice">{item.type?.toUpperCase()} · {item.completions}x</div>
-                                </div>
-                            </div>
-                        ))}
-                        {(!stats?.top_completed || stats.top_completed.length === 0) && (
-                            <div className="notice">No completed titles yet.</div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            {stats.last_watched && <section className="panel"><h2>Last watched</h2><div className="notice">{stats.last_watched.title} · {formatSeconds(stats.last_watched.seconds || 0)} watched</div></section>}
+            <section className="panel"><h2>Favourites</h2><div className="mini-grid">{(dashboard?.favorites || []).map((item) => <article key={item.id} className="mini-card cine-card">{item.poster_url ? <img src={item.poster_url} alt={item.title || 'poster'} /> : <div className="poster-fallback">CinePK</div>}<div className="mini-title">{item.title}</div></article>)}</div></section>
+            <section className="panel"><h2>Watchlist</h2><div className="mini-grid">{(dashboard?.watchlist || []).map((item) => <article key={item.id} className="mini-card cine-card">{item.poster_url ? <img src={item.poster_url} alt={item.title || 'poster'} /> : <div className="poster-fallback">CinePK</div>}<div className="mini-title">{item.title}</div></article>)}</div></section>
+            <section className="panel"><h2>Top 70% Replays</h2><div className="admin-list">{(dashboard?.top_replays || []).map((item) => <div key={item.id} className="admin-item"><div className="admin-title">{item.title}</div><div className="notice">{item.type?.toUpperCase()} · {item.completions}x</div></div>)}</div></section>
+            <MobileBottomNav user={user} />
         </div>
     );
 };
@@ -2032,7 +1803,7 @@ const AccountPage = () => {
 const MainApp = () => (
     <Routes>
         <Route path="/" element={<LibraryPage />} />
-        <Route path="/media/:id" element={<LibraryPage />} />
+        <Route path="/watch/:id" element={<WatchPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/admin" element={<RequireAdmin><AdminPage /></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
